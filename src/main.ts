@@ -35,8 +35,14 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
+  const allowedOrigins = config
+    .get<string>("ALLOWED_ORIGINS", "http://localhost:5173")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin: config.get<string>("ALLOWED_ORIGINS", "http://localhost:5173"),
+    origin: allowedOrigins,
     credentials: true,
   });
 
