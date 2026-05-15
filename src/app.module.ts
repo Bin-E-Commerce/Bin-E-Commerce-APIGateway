@@ -10,6 +10,7 @@ import { RedisModule, REDIS_CLIENT } from "./database/redis/redis.module";
 
 import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
 import { RolesGuard } from "./common/guards/roles.guard";
+import { CsrfGuard } from "./common/guards/csrf.guard";
 import { JwksService } from "./common/services/jwks.service";
 import { HealthModule } from "./modules/health/health.module";
 import { AuthProxyModule } from "./modules/auth/auth-proxy.module";
@@ -55,6 +56,11 @@ import { NotificationProxyModule } from "./modules/notification/notification-pro
       // ThrottlerGuard phải đứng ĐẦU TIÊN — chặn request vượt limit trước khi xử lý JWT
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      // CsrfGuard đứng sau Throttler, trước JWT — từ chối sớm request thiếu CSRF header
+      provide: APP_GUARD,
+      useClass: CsrfGuard,
     },
     {
       provide: APP_GUARD,
