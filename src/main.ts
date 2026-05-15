@@ -2,7 +2,9 @@ import { NestFactory } from "@nestjs/core";
 import { ValidationPipe, VersioningType } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
+import helmet from "helmet";
 import { AppModule } from "./app.module";
+import { buildHelmetOptions } from "./common/config/helmet.config";
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
@@ -10,7 +12,7 @@ async function bootstrap(): Promise<void> {
   });
 
   // Để ThrottlerModule trong NestJS hoạt động đúng,
-  // bạn PHẢI cấu hình NestJS tin tưởng Proxy.
+  // PHẢI cấu hình NestJS tin tưởng Proxy.
   // Nếu không, NestJS sẽ thấy mọi request đều đến từ IP của... Nginx (thường là 127.0.0.1 hoặc IP nội bộ Docker).
   // Khi đó, NestJS sẽ hiểu nhầm tất cả người dùng trên thế giới là 1 người
   // và khóa toàn bộ hệ thống sau 100 request đầu tiên.
@@ -19,7 +21,12 @@ async function bootstrap(): Promise<void> {
   app.getHttpAdapter().getInstance().set("trust proxy", 1);
 
   const config = app.get(ConfigService);
+  const isDev = config.get<string>("NODE_ENV") !== "production";
   const port = config.get<number>("PORT", 3000);
+
+  // Helmet: gắn security headers cho tất cả response
+  // Phải đặt TRƯỚC các middleware khác để header được áp dụng sớm nhất
+  app.use(helmet(buildHelmetOptions(isDev)));
 
   app.setGlobalPrefix("api");
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" });
@@ -47,7 +54,7 @@ async function bootstrap(): Promise<void> {
   });
 
   // Chỉ bật Swagger trong môi trường phát triển để tránh lộ thông tin API trong production
-  if (config.get<string>("NODE_ENV") !== "production") {
+  if (isDev) {
     const doc = new DocumentBuilder()
       .setTitle("Bin E-Commerce — API Gateway")
       .setDescription("Aggregated API documentation for all microservices")

@@ -1,9 +1,12 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { HttpModule } from "@nestjs/axios";
-import { ThrottlerModule } from "@nestjs/throttler";
+import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
+import { ThrottlerStorageRedisService } from "@nest-lab/throttler-storage-redis";
 import { TerminusModule } from "@nestjs/terminus";
 import { APP_GUARD } from "@nestjs/core";
+import Redis from "ioredis";
+import { RedisModule, REDIS_CLIENT } from "./database/redis/redis.module";
 
 import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
 import { RolesGuard } from "./common/guards/roles.guard";
@@ -21,7 +24,23 @@ import { NotificationProxyModule } from "./modules/notification/notification-pro
 
     HttpModule.register({ timeout: 30000, maxRedirects: 0 }), // Cấu hình HttpModule với timeout 30 giây và không cho phép redirect (đảm bảo các request đến auth-service không bị redirect nếu có lỗi)
 
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]), // Cấu hình rate limiting: tối đa 100 request mỗi phút cho mỗi IP
+    // Phải khai báo trước ThrottlerModule để REDIS_CLIENT sẵn sàng inject
+    RedisModule,
+
+    // Rate limiting: Redis-backed — giữ nguyên counter khi restart, đúng khi multi-instance
+    ThrottlerModule.forRootAsync({
+      inject: [REDIS_CLIENT],
+      useFactory: (redis: Redis) => ({
+        throttlers: [
+          {
+            name: "api-gateway-global", // Key Redis: throttler:{ip}:api-gateway-global:hits
+            ttl: 60000, // Cửa sổ 60 giây
+            limit: 100, // Tối đa 100 request/phút/IP
+          },
+        ],
+        storage: new ThrottlerStorageRedisService(redis),
+      }),
+    }),
 
     TerminusModule,
     HealthModule,
@@ -33,13 +52,17 @@ import { NotificationProxyModule } from "./modules/notification/notification-pro
   providers: [
     JwksService,
     {
+      // ThrottlerGuard phải đứng ĐẦU TIÊN — chặn request vượt limit trước khi xử lý JWT
       provide: APP_GUARD,
-
-      useClass: JwtAuthGuard, // Sử dụng JwtAuthGuard làm global guard để bảo vệ tất cả các route theo mặc định, trừ những route được đánh dấu là @Public() sẽ được bỏ qua trong JwtAuthGuard.
+      useClass: ThrottlerGuard,
     },
     {
       provide: APP_GUARD,
-      useClass: RolesGuard, // Sử dụng RolesGuard làm global guard để kiểm tra role của người dùng trên tất cả các route, dựa trên metadata @Roles() được định nghĩa trong controller hoặc route handler.
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
   ],
 })
