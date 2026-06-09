@@ -76,7 +76,13 @@ export class ProxyService {
 
     // Forward injected user context headers from JWT guard,
     // and x-session-id which is sent by the client to identify the current session (used for isCurrent flag in session list)
-    const ctxHeaders = ["x-user-id", "x-user-email", "x-user-roles", "x-session-id"];
+    const ctxHeaders = [
+      "x-user-id",
+      "x-user-email",
+      "x-user-roles",
+      "x-session-id",
+      "user-agent",
+    ];
     for (const h of ctxHeaders) {
       const val = req.headers[h];
       if (val) forward[h] = String(val);
