@@ -15,6 +15,7 @@ import { JwksService } from "./common/services/jwks.service";
 import { HealthModule } from "./modules/health/health.module";
 import { AuthProxyModule } from "./modules/auth/auth-proxy.module";
 import { NotificationProxyModule } from "./modules/notification/notification-proxy.module";
+import { MediaProxyModule } from "./modules/media/media-proxy.module";
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { NotificationProxyModule } from "./modules/notification/notification-pro
 
     // Proxy modules
     AuthProxyModule,
+    MediaProxyModule,
     NotificationProxyModule,
   ],
   providers: [
