@@ -14,8 +14,11 @@ import { CsrfGuard } from "./common/guards/csrf.guard";
 import { JwksService } from "./common/services/jwks.service";
 import { HealthModule } from "./modules/health/health.module";
 import { AuthProxyModule } from "./modules/auth/auth-proxy.module";
+import { CatalogProxyModule } from "./modules/catalog/catalog-proxy.module";
+import { LocationProxyModule } from "./modules/location/location-proxy.module";
 import { NotificationProxyModule } from "./modules/notification/notification-proxy.module";
 import { MediaProxyModule } from "./modules/media/media-proxy.module";
+import { SellerProxyModule } from "./modules/seller/seller-proxy.module";
 
 @Module({
   imports: [
@@ -49,7 +52,10 @@ import { MediaProxyModule } from "./modules/media/media-proxy.module";
 
     // Proxy modules
     AuthProxyModule,
+    CatalogProxyModule,
+    LocationProxyModule,
     MediaProxyModule,
+    SellerProxyModule,
     NotificationProxyModule,
   ],
   providers: [
