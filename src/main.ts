@@ -22,7 +22,7 @@ async function bootstrap(): Promise<void> {
 
   const config = app.get(ConfigService);
   const isDev = config.get<string>("NODE_ENV") !== "production";
-  const port = config.get<number>("PORT", 3000);
+  const port = config.get<number>("PORT", 3001);
 
   // Helmet: gắn security headers cho tất cả response
   // Phải đặt TRƯỚC các middleware khác để header được áp dụng sớm nhất

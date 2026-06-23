@@ -14,7 +14,7 @@ export class MediaProxyController {
   ) {
     this.targetBase = config.get<string>(
       "MEDIA_SERVICE_URL",
-      "http://media-service:3010",
+      "http://media-service:3004",
     );
   }
 

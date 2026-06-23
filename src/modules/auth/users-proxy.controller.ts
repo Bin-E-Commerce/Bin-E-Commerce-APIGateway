@@ -16,7 +16,7 @@ export class UsersProxyController {
   ) {
     this.targetBase = config.get<string>(
       "AUTH_SERVICE_URL",
-      "http://auth-service:3001",
+      "http://auth-service:3002",
     );
   }
 

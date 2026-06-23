@@ -15,7 +15,7 @@ export class NotificationProxyController {
   ) {
     this.targetBase = config.get<string>(
       "NOTIFICATION_SERVICE_URL",
-      "http://notification-service:3006",
+      "http://notification-service:3005",
     );
   }
 
