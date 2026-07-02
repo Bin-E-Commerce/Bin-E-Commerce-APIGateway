@@ -9,7 +9,7 @@ import Redis from "ioredis";
 import { RedisModule, REDIS_CLIENT } from "./database/redis/redis.module";
 
 import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
-import { RolesGuard } from "./common/guards/roles.guard";
+import { PermissionsGuard } from "./common/guards/permissions.guard";
 import { CsrfGuard } from "./common/guards/csrf.guard";
 import { JwksService } from "./common/services/jwks.service";
 import { HealthModule } from "./modules/health/health.module";
@@ -76,7 +76,7 @@ import { SellerProxyModule } from "./modules/seller/seller-proxy.module";
     },
     {
       provide: APP_GUARD,
-      useClass: RolesGuard,
+      useClass: PermissionsGuard,
     },
   ],
 })

@@ -1,69 +1,137 @@
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { HttpService } from "@nestjs/axios";
 import { ConfigService } from "@nestjs/config";
-import * as jwt from "jsonwebtoken"; // Thư viện để giải mã và xác thực JWT
-import jwksClient, { JwksClient } from "jwks-rsa"; // Thư viện để lấy public keys...// Thư viện để lấy public keys từ JWKS endpoint của Keycloak
+import * as jwt from "jsonwebtoken";
+import jwksClient, { JwksClient } from "jwks-rsa";
+import { firstValueFrom } from "rxjs";
+import { normalizeBusinessRoles, Permission } from "@common/auth";
+
+interface KeycloakAccessTokenPayload extends jwt.JwtPayload {
+  email?: string;
+  roles?: string[];
+  realm_access?: {
+    roles?: string[];
+  };
+  resource_access?: Record<
+    string,
+    {
+      roles?: string[];
+    }
+  >;
+}
+
+interface AuthViewerResponse {
+  data?: {
+    permissions?: Permission[];
+  };
+}
 
 export interface JwtPayload {
-  sub: string; // User ID
+  sub: string;
   email: string;
   roles: string[];
-  iss: string; //Dùng để xác định issuer của token, giúp đảm bảo token được phát hành bởi Keycloak của chúng ta
-  exp: number; // Thời gian hết hạn của token, được sử dụng để xác định xem token còn hợp lệ hay không. JwtAuthGuard sẽ dựa vào trường này để từ chối các token đã hết hạn, đảm bảo an toàn cho hệ thống.
-  iat: number; // Thời gian phát hành của token, có thể được sử dụng để kiểm tra xem token có quá cũ hay không nếu cần thiết.
+  permissions: Permission[];
+  iss: string;
+  exp: number;
+  iat: number;
 }
 
 @Injectable()
 export class JwksService implements OnModuleInit {
   private readonly logger = new Logger(JwksService.name);
-  private client!: JwksClient; // Client để tương tác với JWKS endpoint của Keycloak
-  private readonly expectedIssuer: string; // URL của Keycloak realm, dùng để xác thực issuer trong token
+  private client!: JwksClient;
+  private readonly expectedIssuer: string;
+  private readonly authServiceUrl: string;
 
-  // Khởi tạo JwksService với ConfigService để lấy cấu hình Keycloak từ environment variables
-  constructor(private readonly config: ConfigService) {
-    // Xây dựng URL issuer dựa trên cấu hình Keycloak
+  // Khởi tạo issuer Keycloak và URL auth-service để Gateway xác thực token rồi lấy permission động từ backend.
+  constructor(
+    private readonly config: ConfigService,
+    private readonly httpService: HttpService,
+  ) {
     const keycloakUrl = config.get<string>(
       "KEYCLOAK_URL",
       "http://localhost:8080",
     );
-    //
     const realm = config.get<string>("KEYCLOAK_REALM", "bin-ecommerce");
     this.expectedIssuer = `${keycloakUrl}/realms/${realm}`;
+    this.authServiceUrl = config.get<string>(
+      "AUTH_SERVICE_URL",
+      "http://auth-service:3002",
+    );
   }
 
-  // Khởi tạo JWKS client khi module được khởi động, thiết lập các tham số như cache và rate limit
-  // để tối ưu hiệu suất và tránh quá tải cho Keycloak khi lấy public keys để xác thực JWT
+  // Tạo JWKS client một lần khi module boot để cache public keys xác thực JWT.
   onModuleInit(): void {
     this.client = jwksClient({
       jwksUri: `${this.expectedIssuer}/protocol/openid-connect/certs`,
       cache: true,
-      cacheMaxAge: 3600000, // 1 hour
+      cacheMaxAge: 3600000,
       rateLimit: true,
-      jwksRequestsPerMinute: 10, // Giới hạn số lần request đến JWKS endpoint để tránh quá tải cho Keycloak
+      jwksRequestsPerMinute: 10,
     });
     this.logger.log(`JWKS configured for issuer: ${this.expectedIssuer}`);
   }
 
-  // Phương thức để xác thực token bằng cách lấy public key tương ứng từ JWKS endpoint và sử dụng nó để verify token
-  // Public key được tạo ra từ Keycloak sẽ được JWKS endpoint cung cấp, và chúng ta sẽ sử dụng nó để xác thực chữ ký của JWT
-  // Đảm bảo rằng token là hợp lệ và được phát hành bởi Keycloak của chúng ta
+  // Xác thực chữ ký JWT bằng public key Keycloak, sau đó lấy permissions động từ Auth Service.
   async verifyToken(token: string): Promise<JwtPayload> {
-    const decoded = jwt.decode(token, { complete: true }); // Giải mã token để lấy header và xác định kid (key ID) để tìm public key tương ứng từ JWKS endpoint
-    // Kiểm tra cấu trúc token đã hợp lệ chưa, nếu không có header hoặc kid thì token không hợp lệ
+    const decoded = jwt.decode(token, { complete: true });
     if (!decoded || typeof decoded === "string" || !decoded.header.kid) {
       throw new Error("Invalid token structure");
     }
 
-    // Lấy public key từ JWKS endpoint dựa trên kid trong header của token
     const key = await this.client.getSigningKey(decoded.header.kid);
     const publicKey = key.getPublicKey();
-
-    // Xác thực token bằng public key và kiểm tra issuer để đảm bảo token được phát hành bởi Keycloak của chúng ta
     const payload = jwt.verify(token, publicKey, {
-      algorithms: ["RS256"], // Chỉ chấp nhận token được ký bằng thuật toán RS256, đảm bảo tính bảo mật cao hơn so với các thuật toán khác
-      issuer: this.expectedIssuer, // Kiểm tra issuer của token để đảm bảo nó được phát hành bởi Keycloak của chúng ta, tránh việc chấp nhận token giả mạo từ các nguồn khác
-    }) as JwtPayload;
+      algorithms: ["RS256"],
+      issuer: this.expectedIssuer,
+    }) as KeycloakAccessTokenPayload;
+    const roles = this.extractRoles(payload);
+    const userId = payload.sub ?? "";
 
-    // Trả về payload của token đã được xác thực
-    return payload;
+    return {
+      sub: userId,
+      email: payload.email ?? "",
+      roles,
+      permissions: await this.resolveDynamicPermissions(userId, roles),
+      iss: payload.iss ?? "",
+      exp: payload.exp ?? 0,
+      iat: payload.iat ?? 0,
+    };
+  }
+
+  // Lấy permission từ Auth Service thay vì tự derive cứng trong Gateway.
+  // Auth Service dùng Redis cache access profile nên role-permission đổi trong DB sẽ có hiệu lực sau khi cache bị xóa.
+  private async resolveDynamicPermissions(
+    userId: string,
+    roles: string[],
+  ): Promise<Permission[]> {
+    if (!userId) return [];
+
+    const response = await firstValueFrom(
+      this.httpService.get<AuthViewerResponse>(
+        `${this.authServiceUrl}/api/v1/auth/me`,
+        {
+          headers: {
+            "x-user-id": userId,
+            "x-user-roles": roles.join(","),
+          },
+        },
+      ),
+    );
+
+    return response.data.data?.permissions ?? [];
+  }
+
+  // Lấy role từ mọi claim Keycloak, chỉ giữ role nghiệp vụ và bỏ CUSTOMER nếu đã có role cao hơn.
+  private extractRoles(payload: KeycloakAccessTokenPayload): string[] {
+    const rawRoles = [
+      ...(payload.roles ?? []),
+      ...(payload.realm_access?.roles ?? []),
+      ...Object.values(payload.resource_access ?? {}).flatMap(
+        (access) => access.roles ?? [],
+      ),
+    ];
+
+    return normalizeBusinessRoles(rawRoles);
   }
 }

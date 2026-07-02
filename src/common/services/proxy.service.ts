@@ -80,6 +80,7 @@ export class ProxyService {
       "x-user-id",
       "x-user-email",
       "x-user-roles",
+      "x-user-permissions",
       "x-session-id",
       "user-agent",
     ];

@@ -1,6 +1,8 @@
-import { All, Controller, Req, Res } from "@nestjs/common";
+import { All, Controller, Get, Req, Res } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Request, Response } from "express";
+import { Permission } from "@common/auth";
+import { RequirePermissions } from "../../common/decorators/permissions.decorator";
 import { ProxyService } from "../../common/services/proxy.service";
 
 @Controller("seller")
@@ -16,6 +18,16 @@ export class SellerProxyController {
       "SELLER_SERVICE_URL",
       "http://seller-service:3007",
     );
+  }
+
+  // Chặn danh sách hồ sơ seller ngay tại gateway bằng permission cụ thể trước khi proxy vào seller-service.
+  @Get("applications/admin")
+  @RequirePermissions(Permission.SELLER_APPLICATION_READ)
+  async proxyAdminApplications(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToSeller(req, res);
   }
 
   // Proxy route gốc /api/v1/seller sang seller-service.

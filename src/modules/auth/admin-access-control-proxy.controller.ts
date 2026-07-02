@@ -1,16 +1,15 @@
 import { All, Controller, Req, Res } from "@nestjs/common";
-import type { Request, Response } from "express";
 import { ConfigService } from "@nestjs/config";
 import { Permission } from "@common/auth";
+import type { Request, Response } from "express";
 import { RequirePermissions } from "../../common/decorators/permissions.decorator";
 import { ProxyService } from "../../common/services/proxy.service";
 
-// Proxy các request quản lý người dùng sang auth-service.
-// Đây là vùng quản trị rộng nên khóa bằng admin.access thay vì role SUPPORT_AGENT.
-
-@Controller("admin/users")
+// Proxy khu vực cấu hình phân quyền sang auth-service.
+// Chỉ tài khoản có admin.access mới được xem dữ liệu role-permission.
+@Controller("admin/access-control")
 @RequirePermissions(Permission.ADMIN_ACCESS)
-export class AdminUsersProxyController {
+export class AdminAccessControlProxyController {
   private readonly targetBase: string;
 
   constructor(
@@ -23,11 +22,15 @@ export class AdminUsersProxyController {
     );
   }
 
-  // Proxy tất cả các request đến /api/v1/admin/users/* đến auth-service
+  // Đổi route công khai của Admin Center sang route nội bộ của auth-service.
+  // Gateway vẫn là nơi kiểm tra quyền trước, auth-service chỉ nhận request đã có user context.
   @All("*splat")
   async proxy(@Req() req: Request, @Res() res: Response): Promise<void> {
-    const path = req.path.replace(/^\/api/, "");
-    const url = `${this.targetBase}/api${path}`;
+    const path = req.path.replace(
+      /^\/api\/v1\/admin\/access-control/,
+      "/api/v1/auth/access-control",
+    );
+    const url = `${this.targetBase}${path}`;
     const { data, status } = await this.proxyService.forward(url, req);
     res.status(status).json(data);
   }
