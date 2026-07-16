@@ -19,6 +19,7 @@ import { LocationProxyModule } from "./modules/location/location-proxy.module";
 import { NotificationProxyModule } from "./modules/notification/notification-proxy.module";
 import { MediaProxyModule } from "./modules/media/media-proxy.module";
 import { SellerProxyModule } from "./modules/seller/seller-proxy.module";
+import { ProductProxyModule } from "./modules/product/product-proxy.module";
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { SellerProxyModule } from "./modules/seller/seller-proxy.module";
     LocationProxyModule,
     MediaProxyModule,
     SellerProxyModule,
+    ProductProxyModule,
     NotificationProxyModule,
   ],
   providers: [

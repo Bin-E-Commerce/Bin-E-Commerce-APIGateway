@@ -30,6 +30,16 @@ export class SellerProxyController {
     await this.proxyToSeller(req, res);
   }
 
+  // Bảo vệ route chi tiết hồ sơ seller bằng cùng permission đọc hồ sơ trước khi chuyển request xuống seller-service.
+  @Get("applications/admin/:id")
+  @RequirePermissions(Permission.SELLER_APPLICATION_READ)
+  async proxyAdminApplicationDetail(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
   // Proxy route gốc /api/v1/seller sang seller-service.
   @All()
   async proxyRoot(@Req() req: Request, @Res() res: Response): Promise<void> {
