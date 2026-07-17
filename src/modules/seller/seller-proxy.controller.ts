@@ -1,4 +1,4 @@
-import { All, Controller, Get, Req, Res } from "@nestjs/common";
+import { All, Controller, Get, Post, Req, Res } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Request, Response } from "express";
 import { Permission } from "@common/auth";
@@ -34,6 +34,16 @@ export class SellerProxyController {
   @Get("applications/admin/:id")
   @RequirePermissions(Permission.SELLER_APPLICATION_READ)
   async proxyAdminApplicationDetail(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
+  // Tách quyền từ chối khỏi quyền đọc để nhân sự hỗ trợ có thể xem hồ sơ nhưng không tự ý thay đổi kết quả duyệt.
+  @Post("applications/admin/:id/reject")
+  @RequirePermissions(Permission.SELLER_APPLICATION_REJECT)
+  async proxyRejectAdminApplication(
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
