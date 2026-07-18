@@ -19,8 +19,23 @@ export class NotificationProxyController {
     );
   }
 
+  // Route gốc cần handler riêng vì wildcard của Express 5 không khớp /api/v1/notifications khi không có segment phía sau.
+  @All()
+  async proxyRoot(@Req() req: Request, @Res() res: Response): Promise<void> {
+    await this.proxyToNotification(req, res);
+  }
+
+  // Chuyển tiếp các route con như unread-counts, read-all và :id/read tới notification-service.
   @All("*splat")
   async proxy(@Req() req: Request, @Res() res: Response): Promise<void> {
+    await this.proxyToNotification(req, res);
+  }
+
+  // Dùng chung cách dựng upstream URL để route gốc và route con luôn giữ đúng version cùng query parameters.
+  private async proxyToNotification(
+    req: Request,
+    res: Response,
+  ): Promise<void> {
     const path = req.path.replace(/^\/api/, "");
     const url = `${this.targetBase}/api${path}`;
     const { data, status } = await this.proxyService.forward(url, req);

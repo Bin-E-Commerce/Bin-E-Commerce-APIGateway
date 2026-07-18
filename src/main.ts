@@ -5,6 +5,7 @@ import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
 import { buildHelmetOptions } from "./common/config/helmet.config";
+import { ConfiguredSocketIoAdapter } from "./common/adapters/configured-socket-io.adapter";
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
@@ -52,6 +53,11 @@ async function bootstrap(): Promise<void> {
     origin: allowedOrigins,
     credentials: true,
   });
+
+  // WebSocket dùng chung CORS allow-list với HTTP và được khởi tạo sau khi ConfigService đã resolve môi trường.
+  app.useWebSocketAdapter(
+    new ConfiguredSocketIoAdapter(app, allowedOrigins),
+  );
 
   // Chỉ bật Swagger trong môi trường phát triển để tránh lộ thông tin API trong production
   if (isDev) {

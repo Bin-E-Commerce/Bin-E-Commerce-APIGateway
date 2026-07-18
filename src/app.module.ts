@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { HttpModule } from "@nestjs/axios";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { ThrottlerStorageRedisService } from "@nest-lab/throttler-storage-redis";
 import { TerminusModule } from "@nestjs/terminus";
@@ -11,7 +10,7 @@ import { RedisModule, REDIS_CLIENT } from "./database/redis/redis.module";
 import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "./common/guards/permissions.guard";
 import { CsrfGuard } from "./common/guards/csrf.guard";
-import { JwksService } from "./common/services/jwks.service";
+import { SecurityModule } from "./common/security/security.module";
 import { HealthModule } from "./modules/health/health.module";
 import { AuthProxyModule } from "./modules/auth/auth-proxy.module";
 import { CatalogProxyModule } from "./modules/catalog/catalog-proxy.module";
@@ -20,6 +19,7 @@ import { NotificationProxyModule } from "./modules/notification/notification-pro
 import { MediaProxyModule } from "./modules/media/media-proxy.module";
 import { SellerProxyModule } from "./modules/seller/seller-proxy.module";
 import { ProductProxyModule } from "./modules/product/product-proxy.module";
+import { RealtimeNotificationsModule } from "./modules/realtime-notifications/realtime-notifications.module";
 
 @Module({
   imports: [
@@ -28,7 +28,7 @@ import { ProductProxyModule } from "./modules/product/product-proxy.module";
       envFilePath: [".env.local", ".env"],
     }),
 
-    HttpModule.register({ timeout: 30000, maxRedirects: 0 }), // Cấu hình HttpModule với timeout 30 giây và không cho phép redirect (đảm bảo các request đến auth-service không bị redirect nếu có lỗi)
+    SecurityModule,
 
     // Phải khai báo trước ThrottlerModule để REDIS_CLIENT sẵn sàng inject
     RedisModule,
@@ -59,9 +59,9 @@ import { ProductProxyModule } from "./modules/product/product-proxy.module";
     SellerProxyModule,
     ProductProxyModule,
     NotificationProxyModule,
+    RealtimeNotificationsModule,
   ],
   providers: [
-    JwksService,
     {
       // ThrottlerGuard phải đứng ĐẦU TIÊN — chặn request vượt limit trước khi xử lý JWT
       provide: APP_GUARD,
