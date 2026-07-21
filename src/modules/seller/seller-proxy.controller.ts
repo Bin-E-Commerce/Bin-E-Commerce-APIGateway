@@ -50,6 +50,16 @@ export class SellerProxyController {
     await this.proxyToSeller(req, res);
   }
 
+  // Chỉ người có permission duyệt hồ sơ mới được chuyển command xuống seller-service.
+  @Post("applications/admin/:id/approve")
+  @RequirePermissions(Permission.SELLER_APPLICATION_APPROVE)
+  async proxyApproveAdminApplication(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
   // Proxy route gốc /api/v1/seller sang seller-service.
   @All()
   async proxyRoot(@Req() req: Request, @Res() res: Response): Promise<void> {
