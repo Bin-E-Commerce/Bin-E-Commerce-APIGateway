@@ -1,4 +1,4 @@
-import { All, Controller, Get, Post, Req, Res } from "@nestjs/common";
+import { Controller, Get, Patch, Post, Req, Res } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Request, Response } from "express";
 import { Permission } from "@common/auth";
@@ -60,19 +60,63 @@ export class SellerProxyController {
     await this.proxyToSeller(req, res);
   }
 
-  // Proxy route gốc /api/v1/seller sang seller-service.
-  @All()
-  async proxyRoot(@Req() req: Request, @Res() res: Response): Promise<void> {
+  // Onboarding chỉ yêu cầu đăng nhập vì customer chưa có quyền Seller Center trước khi hồ sơ được duyệt.
+  @Get("applications/me")
+  async proxyMyApplication(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
     await this.proxyToSeller(req, res);
   }
 
-  // Proxy toàn bộ /api/v1/seller/* và giữ nguyên user context do JWT guard inject.
-  @All("*splat")
-  async proxy(@Req() req: Request, @Res() res: Response): Promise<void> {
+  // Cho user đã đăng nhập lưu hồ sơ của chính mình; Seller Service lấy ownership từ user context nội bộ.
+  @Patch("applications/me")
+  async proxySaveMyApplication(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
     await this.proxyToSeller(req, res);
   }
 
-  // Dùng chung logic build URL upstream để route gốc và route con không lệch prefix version.
+  // Gửi hồ sơ lần đầu là nghiệp vụ onboarding nên không phụ thuộc permission chỉ được cấp sau khi duyệt.
+  @Post("applications/submit")
+  async proxySubmitApplication(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
+  // Gửi lại hồ sơ bị từ chối vẫn dùng danh tính trong JWT và rule correction tại Seller Service.
+  @Post("applications/resubmit")
+  async proxyResubmitApplication(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
+  // Bảo vệ API đọc hồ sơ shop tại gateway; seller-service vẫn kiểm tra lại ownership bằng userId trong header nội bộ.
+  @Get("shop/profile")
+  @RequirePermissions(Permission.SELLER_SHOP_PROFILE_READ)
+  async proxyShopProfile(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
+  // Quyền cập nhật được tách khỏi quyền đọc để sau này tài khoản nhân viên shop có thể chỉ xem hồ sơ.
+  @Patch("shop/profile")
+  @RequirePermissions(Permission.SELLER_SHOP_PROFILE_UPDATE)
+  async proxyUpdateShopProfile(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
+  // Chỉ các route đã khai báo rõ ở controller mới được proxy; endpoint seller mới sẽ mặc định 404 cho đến khi gắn permission.
   private async proxyToSeller(req: Request, res: Response): Promise<void> {
     const path = req.path.replace(/^\/api/, "");
     const url = `${this.targetBase}/api${path}`;

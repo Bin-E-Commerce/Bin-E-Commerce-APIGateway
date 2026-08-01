@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "nest build",
-    "start": "node --max-old-space-size=100 dist/main",
+    "start": "node --max-old-space-size=100 dist/services/api-gateway/src/main.js",
     "dev": "nest start --watch",
     "lint": "eslint src --ext .ts",
     "type-check": "tsc --noEmit",
