@@ -116,6 +116,56 @@ export class SellerProxyController {
     await this.proxyToSeller(req, res);
   }
 
+  // Cho seller gửi thay đổi compliance của chính shop; Seller Service tự suy ownership từ x-user-id.
+  @Post("shop/profile/change-requests")
+  @RequirePermissions(Permission.SELLER_SHOP_PROFILE_CHANGE_REQUEST_CREATE)
+  async proxyCreateShopProfileChangeRequest(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
+  // Quyền đọc hàng đợi thay đổi hồ sơ độc lập với quyền duyệt hoặc từ chối.
+  @Get("shop/profile/change-requests/admin")
+  @RequirePermissions(Permission.ADMIN_SHOP_PROFILE_CHANGE_REQUEST_READ)
+  async proxyAdminShopProfileChangeRequests(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
+  // Trả snapshot trước/sau để admin đối chiếu mà không mở quyền chỉnh sửa.
+  @Get("shop/profile/change-requests/admin/:requestId")
+  @RequirePermissions(Permission.ADMIN_SHOP_PROFILE_CHANGE_REQUEST_READ)
+  async proxyAdminShopProfileChangeRequestDetail(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
+  // Chỉ role có quyền approve mới được áp dụng dữ liệu nhạy cảm vào hồ sơ hiện hành.
+  @Post("shop/profile/change-requests/admin/:requestId/approve")
+  @RequirePermissions(Permission.ADMIN_SHOP_PROFILE_CHANGE_REQUEST_APPROVE)
+  async proxyApproveShopProfileChangeRequest(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
+  // Từ chối dùng permission riêng để audit phân biệt người xem và người ra quyết định.
+  @Post("shop/profile/change-requests/admin/:requestId/reject")
+  @RequirePermissions(Permission.ADMIN_SHOP_PROFILE_CHANGE_REQUEST_REJECT)
+  async proxyRejectShopProfileChangeRequest(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
   // Chỉ các route đã khai báo rõ ở controller mới được proxy; endpoint seller mới sẽ mặc định 404 cho đến khi gắn permission.
   private async proxyToSeller(req: Request, res: Response): Promise<void> {
     const path = req.path.replace(/^\/api/, "");
