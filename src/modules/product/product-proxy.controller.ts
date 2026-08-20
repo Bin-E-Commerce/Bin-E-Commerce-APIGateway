@@ -1,4 +1,4 @@
-import { Controller, Get, Req, Res } from "@nestjs/common";
+import { Controller, Get, Post, Req, Res } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Request, Response } from "express";
 import { Permission } from "@common/auth";
@@ -31,6 +31,16 @@ export class ProductProxyController {
     await this.proxyToProduct(req, res);
   }
 
+  // Danh mục thương hiệu là dữ liệu tham chiếu công khai cho bộ lọc và form tạo sản phẩm.
+  @Public()
+  @Get("brands")
+  async proxyPublicBrands(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToProduct(req, res, "/v1/brands");
+  }
+
   // Gateway kiểm tra quyền module trước khi chuyển user context xuống Product Service để lọc ownership.
   @Get("seller")
   @RequirePermissions(Permission.SELLER_PRODUCT_READ)
@@ -40,6 +50,16 @@ export class ProductProxyController {
   ): Promise<void> {
     // Public URL giữ dạng /products/seller, còn URL nội bộ tách namespace để không đụng /products/:id.
     // internalPath phải giữ `/v1` vì proxy helper sẽ ghép thêm prefix `/api` của Product Service.
+    await this.proxyToProduct(req, res, "/v1/seller/products");
+  }
+
+  // Chỉ tài khoản có quyền tạo product mới được chuyển payload xuống Product Service.
+  @Post("seller")
+  @RequirePermissions(Permission.SELLER_PRODUCT_CREATE)
+  async proxyCreateSellerProduct(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
     await this.proxyToProduct(req, res, "/v1/seller/products");
   }
 
