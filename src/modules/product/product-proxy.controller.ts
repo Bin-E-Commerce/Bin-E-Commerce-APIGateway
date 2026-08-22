@@ -53,6 +53,20 @@ export class ProductProxyController {
     await this.proxyToProduct(req, res, "/v1/seller/products");
   }
 
+  // Chi tiết seller dùng endpoint có ownership riêng và kế thừa cùng quyền đọc với danh sách sản phẩm.
+  @Get("seller/:productId")
+  @RequirePermissions(Permission.SELLER_PRODUCT_READ)
+  async proxySellerProductDetail(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToProduct(
+      req,
+      res,
+      `/v1/seller/products/${req.params.productId}`,
+    );
+  }
+
   // Chỉ tài khoản có quyền tạo product mới được chuyển payload xuống Product Service.
   @Post("seller")
   @RequirePermissions(Permission.SELLER_PRODUCT_CREATE)
