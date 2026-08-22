@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Req, Res } from "@nestjs/common";
+import { Controller, Get, Post, Put, Req, Res } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Request, Response } from "express";
 import { Permission } from "@common/auth";
@@ -75,6 +75,20 @@ export class ProductProxyController {
     @Res() res: Response,
   ): Promise<void> {
     await this.proxyToProduct(req, res, "/v1/seller/products");
+  }
+
+  // Chuyển payload chỉnh sửa tới Product Service với permission riêng để seller chỉ sửa sản phẩm thuộc shop của mình.
+  @Put("seller/:productId")
+  @RequirePermissions(Permission.SELLER_PRODUCT_UPDATE)
+  async proxyUpdateSellerProduct(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToProduct(
+      req,
+      res,
+      `/v1/seller/products/${req.params.productId}`,
+    );
   }
 
   // Chi tiết sản phẩm storefront là dữ liệu công khai; route đặt sau /seller để tránh hiểu "seller" là product ID.
