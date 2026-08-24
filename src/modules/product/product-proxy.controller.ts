@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Req, Res } from "@nestjs/common";
+import { Controller, Delete, Get, Patch, Post, Put, Req, Res } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Request, Response } from "express";
 import { Permission } from "@common/auth";
@@ -88,6 +88,34 @@ export class ProductProxyController {
       req,
       res,
       `/v1/seller/products/${req.params.productId}`,
+    );
+  }
+
+  // Chuyển yêu cầu xóa mềm tới Product Service với permission delete riêng của seller.
+  @Delete("seller/:productId")
+  @RequirePermissions(Permission.SELLER_PRODUCT_DELETE)
+  async proxyDeleteSellerProduct(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToProduct(
+      req,
+      res,
+      `/v1/seller/products/${req.params.productId}`,
+    );
+  }
+
+  // Chuyển thao tác bật/tắt sang contract PATCH riêng, không gửi lại toàn bộ product graph.
+  @Patch("seller/:productId/status")
+  @RequirePermissions(Permission.SELLER_PRODUCT_STATUS_UPDATE)
+  async proxyChangeSellerProductStatus(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToProduct(
+      req,
+      res,
+      `/v1/seller/products/${req.params.productId}/status`,
     );
   }
 
