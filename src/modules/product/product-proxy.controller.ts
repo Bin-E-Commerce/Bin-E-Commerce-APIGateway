@@ -105,6 +105,20 @@ export class ProductProxyController {
     );
   }
 
+  // Chuyển yêu cầu khôi phục product đã xóa mềm với permission riêng của seller.
+  @Post("seller/:productId/restore")
+  @RequirePermissions(Permission.SELLER_PRODUCT_RESTORE)
+  async proxyRestoreSellerProduct(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToProduct(
+      req,
+      res,
+      `/v1/seller/products/${req.params.productId}/restore`,
+    );
+  }
+
   // Chuyển thao tác bật/tắt sang contract PATCH riêng, không gửi lại toàn bộ product graph.
   @Patch("seller/:productId/status")
   @RequirePermissions(Permission.SELLER_PRODUCT_STATUS_UPDATE)
