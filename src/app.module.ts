@@ -1,3 +1,6 @@
+// File này lắp các module của API Gateway và thứ tự global guard bảo vệ request trước khi proxy xuống service.
+// Module không chứa business logic hoặc provider AI; các nghiệp vụ đó nằm ở bounded context tương ứng.
+
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
@@ -19,6 +22,7 @@ import { NotificationProxyModule } from "./modules/notification/notification-pro
 import { MediaProxyModule } from "./modules/media/media-proxy.module";
 import { SellerProxyModule } from "./modules/seller/seller-proxy.module";
 import { ProductProxyModule } from "./modules/product/product-proxy.module";
+import { AiProxyModule } from "./modules/ai/ai-proxy.module";
 import { RealtimeNotificationsModule } from "./modules/realtime-notifications/realtime-notifications.module";
 
 @Module({
@@ -58,6 +62,7 @@ import { RealtimeNotificationsModule } from "./modules/realtime-notifications/re
     MediaProxyModule,
     SellerProxyModule,
     ProductProxyModule,
+    AiProxyModule,
     NotificationProxyModule,
     RealtimeNotificationsModule,
   ],
