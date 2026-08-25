@@ -37,4 +37,16 @@ export class AiProxyController {
     const { data, status } = await this.proxyService.forward(url, req);
     res.status(status).json(data);
   }
+
+  // Proxy mô tả qua cùng permission AI; Gateway chỉ chuyển tiếp context và không chứa prompt/API key.
+  @Post("description-suggestions")
+  @RequirePermissions(Permission.SELLER_AI_PRODUCT_CONTENT_GENERATE)
+  async proxyProductDescriptionSuggestions(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    const url = `${this.targetBase}/api/v1/seller/product-content/description-suggestions`;
+    const { data, status } = await this.proxyService.forward(url, req);
+    res.status(status).json(data);
+  }
 }
