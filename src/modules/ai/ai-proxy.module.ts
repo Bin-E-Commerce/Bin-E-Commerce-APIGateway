@@ -5,10 +5,11 @@ import { Module } from "@nestjs/common";
 import { HttpModule } from "@nestjs/axios";
 import { ProxyService } from "../../common/services/proxy.service";
 import { AiProxyController } from "./ai-proxy.controller";
+import { ImageOptimizationProxyController } from "./image-optimization-proxy.controller";
 
 @Module({
   imports: [HttpModule],
-  controllers: [AiProxyController],
+  controllers: [AiProxyController, ImageOptimizationProxyController],
   providers: [ProxyService],
 })
 export class AiProxyModule {}

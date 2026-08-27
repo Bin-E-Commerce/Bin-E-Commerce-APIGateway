@@ -82,6 +82,8 @@ export class ProxyService {
       "x-user-roles",
       "x-user-permissions",
       "x-session-id",
+      "idempotency-key",
+      "x-request-id",
       "user-agent",
     ];
     for (const h of ctxHeaders) {
