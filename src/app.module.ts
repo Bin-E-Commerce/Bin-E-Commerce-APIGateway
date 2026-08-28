@@ -24,6 +24,7 @@ import { SellerProxyModule } from "./modules/seller/seller-proxy.module";
 import { ProductProxyModule } from "./modules/product/product-proxy.module";
 import { AiProxyModule } from "./modules/ai/ai-proxy.module";
 import { RealtimeNotificationsModule } from "./modules/realtime-notifications/realtime-notifications.module";
+import { CartProxyModule } from "./modules/cart/cart-proxy.module";
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { RealtimeNotificationsModule } from "./modules/realtime-notifications/re
     AiProxyModule,
     NotificationProxyModule,
     RealtimeNotificationsModule,
+    CartProxyModule,
   ],
   providers: [
     {

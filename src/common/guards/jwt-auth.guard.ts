@@ -6,9 +6,11 @@ import {
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { Request } from "express";
+import { ALLOW_GUEST_KEY } from "../decorators/allow-guest.decorator";
 import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
 import { JwksService } from "../services/jwks.service";
 
+// Guard này xác thực JWT và inject user context; route AllowGuest chỉ bỏ qua token khi token không có mặt.
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
@@ -24,9 +26,22 @@ export class JwtAuthGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
+    const allowGuest = this.reflector.getAllAndOverride<boolean>(
+      ALLOW_GUEST_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
     const request = context.switchToHttp().getRequest<Request>();
     const token = this.extractToken(request);
     if (!token) {
+      if (allowGuest) {
+        // Không tin các identity header do browser tự gửi khi chưa có JWT; chỉ giữ x-session-id cho Guest.
+        delete request.headers["x-user-id"];
+        delete request.headers["x-user-email"];
+        delete request.headers["x-user-roles"];
+        delete request.headers["x-user-permissions"];
+        return true;
+      }
       throw new UnauthorizedException("Missing authorization token");
     }
 

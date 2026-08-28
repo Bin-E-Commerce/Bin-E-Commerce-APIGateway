@@ -7,9 +7,11 @@ import {
 import { Reflector } from "@nestjs/core";
 import type { Request } from "express";
 import { Permission } from "@common/auth";
+import { ALLOW_GUEST_KEY } from "../decorators/allow-guest.decorator";
 import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
 import { PERMISSIONS_KEY } from "../decorators/permissions.decorator";
 
+// Guard này kiểm tra permission khi route yêu cầu; Guest chỉ được đi qua route đã khai báo AllowGuest.
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
@@ -29,6 +31,12 @@ export class PermissionsGuard implements CanActivate {
     if (!requiredPermissions || requiredPermissions.length === 0) return true;
 
     const request = context.switchToHttp().getRequest<Request>();
+    const allowGuest = this.reflector.getAllAndOverride<boolean>(
+      ALLOW_GUEST_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    if (allowGuest && !request.headers["x-user-id"]) return true;
+
     const userPermissions = this.parseHeaderList(
       request.headers["x-user-permissions"],
     );
