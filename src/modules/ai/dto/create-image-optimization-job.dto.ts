@@ -52,7 +52,7 @@ export class LifestyleBackgroundDto {
 export class CreateImageOptimizationJobDto {
   @IsArray()
   @ArrayMinSize(1)
-  @ArrayMaxSize(10)
+  @ArrayMaxSize(1)
   @ArrayUnique()
   @IsUUID('4', { each: true })
   productIds!: string[];
@@ -64,7 +64,7 @@ export class CreateImageOptimizationJobDto {
   @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
-  @ArrayMaxSize(9)
+  @ArrayMaxSize(1)
   @ArrayUnique()
   @IsUUID('4', { each: true })
   sourceAssetIds?: string[];
