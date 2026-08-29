@@ -1,7 +1,16 @@
 // Controller này chuyển tiếp API cart công khai cho Guest và Customer tới Cart Service.
 // Gateway giữ responsibility về auth context, còn Cart Service quyết định tạo hoặc đọc cart.
 
-import { Controller, Get, Req, Res } from "@nestjs/common";
+import {
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+  Res,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Request, Response } from "express";
 import { Permission } from "@common/auth";
@@ -34,6 +43,44 @@ export class CartProxyController {
     @Res() res: Response,
   ): Promise<void> {
     const url = `${this.targetBase}/api/v1/cart`;
+    const { data, status } = await this.proxyService.forward(url, req);
+    res.status(status).json(data);
+  }
+
+  // Route thêm item bắt buộc có JWT và cart.item.add; Gateway chỉ forward body cùng user context đã xác thực.
+  @Post("items")
+  @RequirePermissions(Permission.CART_ITEM_ADD)
+  async proxyAddCartItem(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    const url = `${this.targetBase}/api/v1/cart/items`;
+    const { data, status } = await this.proxyService.forward(url, req);
+    res.status(status).json(data);
+  }
+
+  // Route cập nhật quantity chỉ forward request; Cart Service giữ business rule và kiểm tra ownership.
+  @Patch("items/:itemId")
+  @RequirePermissions(Permission.CART_ITEM_UPDATE)
+  async proxyUpdateCartItem(
+    @Param("itemId") itemId: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    const url = `${this.targetBase}/api/v1/cart/items/${itemId}`;
+    const { data, status } = await this.proxyService.forward(url, req);
+    res.status(status).json(data);
+  }
+
+  // Route xóa item dùng permission riêng để admin có thể kiểm soát độc lập với thao tác thêm/cập nhật.
+  @Delete("items/:itemId")
+  @RequirePermissions(Permission.CART_ITEM_REMOVE)
+  async proxyRemoveCartItem(
+    @Param("itemId") itemId: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    const url = `${this.targetBase}/api/v1/cart/items/${itemId}`;
     const { data, status } = await this.proxyService.forward(url, req);
     res.status(status).json(data);
   }
