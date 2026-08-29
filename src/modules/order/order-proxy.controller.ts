@@ -18,26 +18,67 @@ export class OrderProxyController {
     private readonly config: ConfigService,
     private readonly proxyService: ProxyService,
   ) {
-    this.targetBase = config.get<string>("ORDER_SERVICE_URL", "http://localhost:3011");
+    this.targetBase = config.get<string>(
+      "ORDER_SERVICE_URL",
+      "http://localhost:3011",
+    );
   }
 
   // Chỉ user có order.create mới được yêu cầu tạo order từ active cart.
   @Post()
   @RequirePermissions(Permission.ORDER_CREATE)
-  async proxyCreateOrder(@Req() request: Request, @Res() response: Response): Promise<void> {
-    const { data, status } = await this.proxyService.forward(`${this.targetBase}/api/v1/orders`, request);
+  async proxyCreateOrder(
+    @Req() request: Request,
+    @Res() response: Response,
+  ): Promise<void> {
+    const { data, status } = await this.proxyService.forward(
+      `${this.targetBase}/api/v1/orders`,
+      request,
+    );
+    response.status(status).json(data);
+  }
+
+  // Forward lịch sử order kèm query filter và phân trang; ownership được kiểm tra lại ở Order Service.
+  @Get()
+  @RequirePermissions(Permission.ORDER_READ)
+  async proxyOrderList(
+    @Req() request: Request,
+    @Res() response: Response,
+  ): Promise<void> {
+    const { data, status } = await this.proxyService.forward(
+      `${this.targetBase}/api/v1/orders`,
+      request,
+    );
     response.status(status).json(data);
   }
 
   // Forward chi tiết order; Order Service tự lọc owner bằng x-user-id.
   @Get(":orderId")
-  @RequirePermissions(Permission.ORDER_CREATE)
+  @RequirePermissions(Permission.ORDER_READ)
   async proxyOrderDetail(
     @Param("orderId") orderId: string,
     @Req() request: Request,
     @Res() response: Response,
   ): Promise<void> {
-    const { data, status } = await this.proxyService.forward(`${this.targetBase}/api/v1/orders/${orderId}`, request);
+    const { data, status } = await this.proxyService.forward(
+      `${this.targetBase}/api/v1/orders/${orderId}`,
+      request,
+    );
+    response.status(status).json(data);
+  }
+
+  // Forward yêu cầu hủy order tới service sở hữu transaction và reservation inventory.
+  @Post(":orderId/cancel")
+  @RequirePermissions(Permission.ORDER_CANCEL)
+  async proxyCancelOrder(
+    @Param("orderId") orderId: string,
+    @Req() request: Request,
+    @Res() response: Response,
+  ): Promise<void> {
+    const { data, status } = await this.proxyService.forward(
+      `${this.targetBase}/api/v1/orders/${orderId}/cancel`,
+      request,
+    );
     response.status(status).json(data);
   }
 }
