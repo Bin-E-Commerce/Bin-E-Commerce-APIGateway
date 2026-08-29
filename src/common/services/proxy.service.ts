@@ -8,7 +8,7 @@ import {
   Injectable,
   Logger,
   HttpException,
-  InternalServerErrorException,
+  ServiceUnavailableException,
 } from "@nestjs/common";
 import { HttpService } from "@nestjs/axios";
 import { AxiosError, AxiosRequestConfig } from "axios";
@@ -65,7 +65,7 @@ export class ProxyService {
       }
 
       // Nếu không có response từ upstream (ví dụ: network error), trả về lỗi 503 Service Unavailable
-      throw new InternalServerErrorException("Upstream service unavailable");
+      throw new ServiceUnavailableException("Upstream service unavailable");
     }
   }
 
