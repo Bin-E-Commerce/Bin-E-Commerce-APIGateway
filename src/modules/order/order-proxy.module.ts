@@ -4,11 +4,12 @@ import { Module } from "@nestjs/common";
 import { HttpModule } from "@nestjs/axios";
 import { ProxyService } from "../../common/services/proxy.service";
 import { OrderProxyController } from "./order-proxy.controller";
+import { SellerOrderProxyController } from "./seller-order-proxy.controller";
 
 // Module proxy độc lập giúp Gateway tổ chức theo từng domain nghiệp vụ.
 @Module({
   imports: [HttpModule],
-  controllers: [OrderProxyController],
+  controllers: [OrderProxyController, SellerOrderProxyController],
   providers: [ProxyService],
 })
 export class OrderProxyModule {}
