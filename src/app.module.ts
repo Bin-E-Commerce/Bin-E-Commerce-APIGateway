@@ -17,7 +17,6 @@ import { SecurityModule } from "./common/security/security.module";
 import { HealthModule } from "./modules/health/health.module";
 import { AuthProxyModule } from "./modules/auth/auth-proxy.module";
 import { CatalogProxyModule } from "./modules/catalog/catalog-proxy.module";
-import { LocationProxyModule } from "./modules/location/location-proxy.module";
 import { NotificationProxyModule } from "./modules/notification/notification-proxy.module";
 import { MediaProxyModule } from "./modules/media/media-proxy.module";
 import { SellerProxyModule } from "./modules/seller/seller-proxy.module";
@@ -26,6 +25,7 @@ import { AiProxyModule } from "./modules/ai/ai-proxy.module";
 import { RealtimeNotificationsModule } from "./modules/realtime-notifications/realtime-notifications.module";
 import { CartProxyModule } from "./modules/cart/cart-proxy.module";
 import { OrderProxyModule } from "./modules/order/order-proxy.module";
+import { ShippingProxyModule } from "./modules/shipping/shipping-proxy.module";
 
 @Module({
   imports: [
@@ -60,7 +60,6 @@ import { OrderProxyModule } from "./modules/order/order-proxy.module";
     // Proxy modules
     AuthProxyModule,
     CatalogProxyModule,
-    LocationProxyModule,
     MediaProxyModule,
     SellerProxyModule,
     ProductProxyModule,
@@ -69,6 +68,7 @@ import { OrderProxyModule } from "./modules/order/order-proxy.module";
     RealtimeNotificationsModule,
     CartProxyModule,
     OrderProxyModule,
+    ShippingProxyModule,
   ],
   providers: [
     {

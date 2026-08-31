@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Post, Req, Res } from "@nestjs/common";
+import { Controller, Delete, Get, Patch, Post, Req, Res } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Request, Response } from "express";
 import { Permission } from "@common/auth";
@@ -163,6 +163,48 @@ export class SellerProxyController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
+  // Seller chỉ đọc cấu hình giao nhận của shop đã resolve từ JWT.
+  @Get("shipping/settings")
+  @RequirePermissions(Permission.SELLER_SHIPPING_SETTINGS_READ)
+  async proxyShippingSettings(@Req() req: Request, @Res() res: Response): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
+  // Seller cập nhật khung giờ và địa chỉ mặc định trong phạm vi shop của mình.
+  @Patch("shipping/settings")
+  @RequirePermissions(Permission.SELLER_SHIPPING_SETTINGS_MANAGE)
+  async proxyUpdateShippingSettings(@Req() req: Request, @Res() res: Response): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
+  // Tạo pickup address mới, backend tự gắn shop theo user context.
+  @Post("shipping/pickup-addresses")
+  @RequirePermissions(Permission.SELLER_SHIPPING_SETTINGS_MANAGE)
+  async proxyCreatePickupAddress(@Req() req: Request, @Res() res: Response): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
+  // Chọn địa chỉ mặc định mà không nhận shopId từ frontend.
+  @Post("shipping/pickup-addresses/:id/default")
+  @RequirePermissions(Permission.SELLER_SHIPPING_SETTINGS_MANAGE)
+  async proxySetDefaultPickupAddress(@Req() req: Request, @Res() res: Response): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
+  // Cập nhật pickup address trong phạm vi shop hiện tại; seller không truyền shopId để thay đổi scope.
+  @Patch("shipping/pickup-addresses/:id")
+  @RequirePermissions(Permission.SELLER_SHIPPING_SETTINGS_MANAGE)
+  async proxyUpdatePickupAddress(@Req() req: Request, @Res() res: Response): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
+  // Xóa pickup address theo ownership do Seller Service kiểm tra lại, không xóa nhầm địa chỉ shop khác.
+  @Delete("shipping/pickup-addresses/:id")
+  @RequirePermissions(Permission.SELLER_SHIPPING_SETTINGS_MANAGE)
+  async proxyDeletePickupAddress(@Req() req: Request, @Res() res: Response): Promise<void> {
     await this.proxyToSeller(req, res);
   }
 

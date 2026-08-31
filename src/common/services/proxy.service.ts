@@ -69,6 +69,27 @@ export class ProxyService {
     }
   }
 
+  // Forward binary response như nhãn PDF mà không ép dữ liệu thành JSON.
+  async forwardBinary(targetUrl: string, req: Request): Promise<{ data: Buffer; status: number; headers: Record<string, string | string[]> }> {
+    try {
+      const response = await firstValueFrom(this.httpService.request<Buffer>({
+        method: req.method as AxiosRequestConfig["method"],
+        url: targetUrl,
+        data: req.body,
+        headers: this.buildForwardHeaders(req),
+        params: req.query,
+        responseType: "arraybuffer",
+        validateStatus: () => true,
+      }));
+      return { data: Buffer.from(response.data), status: response.status, headers: response.headers as Record<string, string | string[]> };
+    } catch (err) {
+      const axiosErr = err as AxiosError;
+      this.logger.error(`Proxy binary error to ${targetUrl}: ${axiosErr.message}`);
+      if (axiosErr.response) throw new HttpException(axiosErr.response.data as object, axiosErr.response.status);
+      throw new ServiceUnavailableException("Upstream service unavailable");
+    }
+  }
+
   // Xây dựng header để forward, bao gồm cả thông tin người dùng được inject từ JWT guard
   // Dùng để đảm bảo rằng các service downstream có thể nhận được thông tin người dùng (user context) để thực hiện authorization hoặc logging nếu cần thiết
   private buildForwardHeaders(req: Request): Record<string, string> {
