@@ -25,6 +25,29 @@ export class OrderProxyController {
   }
 
   // Chỉ user có order.create mới được yêu cầu tạo order từ active cart.
+  @Post("quote")
+  @RequirePermissions(Permission.ORDER_CREATE)
+  async proxyOrderQuote(@Req() request: Request, @Res() response: Response): Promise<void> {
+    const { data, status } = await this.proxyService.forward(`${this.targetBase}/api/v1/orders/quote`, request);
+    response.status(status).json(data);
+  }
+
+  // Đối chiếu địa chỉ checkout với bộ mã GHN trước khi gọi quote.
+  @Post("shipping-address/resolve")
+  @RequirePermissions(Permission.ORDER_CREATE)
+  async proxyShippingAddressResolve(@Req() request: Request, @Res() response: Response): Promise<void> {
+    const { data, status } = await this.proxyService.forward(`${this.targetBase}/api/v1/orders/shipping-address/resolve`, request);
+    response.status(status).json(data);
+  }
+
+  // Lấy danh sách phường/xã GHN theo quận/huyện mà người mua đã chọn.
+  @Post("shipping-address/ghn-wards")
+  @RequirePermissions(Permission.ORDER_CREATE)
+  async proxyShippingAddressWards(@Req() request: Request, @Res() response: Response): Promise<void> {
+    const { data, status } = await this.proxyService.forward(`${this.targetBase}/api/v1/orders/shipping-address/ghn-wards`, request);
+    response.status(status).json(data);
+  }
+
   @Post()
   @RequirePermissions(Permission.ORDER_CREATE)
   async proxyCreateOrder(
@@ -35,6 +58,22 @@ export class OrderProxyController {
       `${this.targetBase}/api/v1/orders`,
       request,
     );
+    response.status(status).json(data);
+  }
+
+  // Customer tạo return request cho order của chính mình; Order Service kiểm tra điều kiện 7 ngày.
+  @Post(":orderId/returns")
+  @RequirePermissions(Permission.ORDER_READ)
+  async proxyCreateReturn(@Param("orderId") orderId: string, @Req() request: Request, @Res() response: Response): Promise<void> {
+    const { data, status } = await this.proxyService.forward(`${this.targetBase}/api/v1/orders/${orderId}/returns`, request);
+    response.status(status).json(data);
+  }
+
+  // Customer đọc return history thuộc order hiện tại.
+  @Get(":orderId/returns")
+  @RequirePermissions(Permission.ORDER_READ)
+  async proxyListReturns(@Param("orderId") orderId: string, @Req() request: Request, @Res() response: Response): Promise<void> {
+    const { data, status } = await this.proxyService.forward(`${this.targetBase}/api/v1/orders/${orderId}/returns`, request);
     response.status(status).json(data);
   }
 
