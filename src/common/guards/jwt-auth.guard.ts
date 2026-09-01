@@ -38,6 +38,8 @@ export class JwtAuthGuard implements CanActivate {
         // Không tin các identity header do browser tự gửi khi chưa có JWT; chỉ giữ x-session-id cho Guest.
         delete request.headers["x-user-id"];
         delete request.headers["x-user-email"];
+        delete request.headers["x-user-name"];
+        delete request.headers["x-user-avatar-url"];
         delete request.headers["x-user-roles"];
         delete request.headers["x-user-permissions"];
         return true;
@@ -51,6 +53,8 @@ export class JwtAuthGuard implements CanActivate {
       // Inject user context vào header để proxy và service downstream dùng chung một nguồn phân quyền.
       request.headers["x-user-id"] = payload.sub;
       request.headers["x-user-email"] = payload.email;
+      request.headers["x-user-name"] = payload.name;
+      request.headers["x-user-avatar-url"] = payload.avatarUrl ?? "";
       request.headers["x-user-roles"] = (payload.roles ?? []).join(",");
       request.headers["x-user-permissions"] = (payload.permissions ?? []).join(
         ",",

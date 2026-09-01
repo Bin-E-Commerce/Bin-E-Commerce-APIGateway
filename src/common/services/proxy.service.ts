@@ -100,6 +100,8 @@ export class ProxyService {
     const ctxHeaders = [
       "x-user-id",
       "x-user-email",
+      "x-user-name",
+      "x-user-avatar-url",
       "x-user-roles",
       "x-user-permissions",
       "x-session-id",

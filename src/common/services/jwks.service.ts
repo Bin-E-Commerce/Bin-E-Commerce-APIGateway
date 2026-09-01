@@ -8,6 +8,10 @@ import { normalizeBusinessRoles, Permission } from "@common/auth";
 
 interface KeycloakAccessTokenPayload extends jwt.JwtPayload {
   email?: string;
+  name?: string;
+  preferred_username?: string;
+  picture?: string;
+  avatar_url?: string;
   roles?: string[];
   realm_access?: {
     roles?: string[];
@@ -23,12 +27,16 @@ interface KeycloakAccessTokenPayload extends jwt.JwtPayload {
 interface AuthViewerResponse {
   data?: {
     permissions?: Permission[];
+    name?: string;
+    avatarUrl?: string | null;
   };
 }
 
 export interface JwtPayload {
   sub: string;
   email: string;
+  name: string;
+  avatarUrl: string | null;
   roles: string[];
   permissions: Permission[];
   iss: string;
@@ -87,25 +95,33 @@ export class JwksService implements OnModuleInit {
     }) as KeycloakAccessTokenPayload;
     const roles = this.extractRoles(payload);
     const userId = payload.sub ?? "";
+    const viewer = await this.resolveDynamicViewer(userId, roles);
 
     return {
       sub: userId,
       email: payload.email ?? "",
+      name:
+        viewer.name ??
+        payload.name ??
+        payload.preferred_username ??
+        payload.email?.split("@")[0] ??
+        "",
+      avatarUrl: viewer.avatarUrl ?? payload.picture ?? payload.avatar_url ?? null,
       roles,
-      permissions: await this.resolveDynamicPermissions(userId, roles),
+      permissions: viewer.permissions ?? [],
       iss: payload.iss ?? "",
       exp: payload.exp ?? 0,
       iat: payload.iat ?? 0,
     };
   }
 
-  // Lấy permission từ Auth Service thay vì tự derive cứng trong Gateway.
+  // Lấy viewer từ Auth Service để dùng permission và profile chính thức thay vì tự derive cứng trong Gateway.
   // Auth Service dùng Redis cache access profile nên role-permission đổi trong DB sẽ có hiệu lực sau khi cache bị xóa.
-  private async resolveDynamicPermissions(
+  private async resolveDynamicViewer(
     userId: string,
     roles: string[],
-  ): Promise<Permission[]> {
-    if (!userId) return [];
+  ): Promise<NonNullable<AuthViewerResponse["data"]>> {
+    if (!userId) return { permissions: [] };
 
     const response = await firstValueFrom(
       this.httpService.get<AuthViewerResponse>(
@@ -119,7 +135,7 @@ export class JwksService implements OnModuleInit {
       ),
     );
 
-    return response.data.data?.permissions ?? [];
+    return response.data.data ?? { permissions: [] };
   }
 
   // Lấy role từ mọi claim Keycloak, chỉ giữ role nghiệp vụ và bỏ CUSTOMER nếu đã có role cao hơn.
