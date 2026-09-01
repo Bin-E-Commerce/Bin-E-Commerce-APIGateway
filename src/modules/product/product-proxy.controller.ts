@@ -1,8 +1,11 @@
+// File này định tuyến product/review request qua API Gateway.
+// Gateway chịu trách nhiệm guest/auth/permission và forward identity; business rule nằm ở Product Service.
 import { Controller, Delete, Get, Patch, Post, Put, Req, Res } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Request, Response } from "express";
 import { Permission } from "@common/auth";
 import { RequirePermissions } from "../../common/decorators/permissions.decorator";
+import { AllowGuest } from "../../common/decorators/allow-guest.decorator";
 import { Public } from "../../common/decorators/public.decorator";
 import { ProxyService } from "../../common/services/proxy.service";
 
@@ -133,14 +136,74 @@ export class ProductProxyController {
     );
   }
 
+  // Customer lấy trạng thái review theo order để nút “Đánh giá ngay” không cần gọi từng product riêng lẻ.
+  @Get("reviews/me")
+  @RequirePermissions(Permission.ORDER_READ)
+  async proxyMyReviews(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToProduct(req, res, "/v1/reviews/me");
+  }
+
   // Chi tiết sản phẩm storefront là dữ liệu công khai; route đặt sau /seller để tránh hiểu "seller" là product ID.
-  @Public()
+  @AllowGuest()
   @Get(":id")
   async proxyPublicProductDetail(
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
     await this.proxyToProduct(req, res);
+  }
+
+  // Customer tạo review qua Gateway; Product Service sẽ tự đối chiếu orderItem với Order Service.
+  @Post(":productId/reviews")
+  @RequirePermissions(Permission.PRODUCT_REVIEW_CREATE)
+  async proxyCreateProductReview(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToProduct(req, res, `/v1/products/${req.params.productId}/reviews`);
+  }
+
+  // Customer chỉnh sửa review của chính mình; Product Service tiếp tục kiểm tra purchase proof và deadline.
+  @Patch("reviews/:reviewId")
+  @RequirePermissions(Permission.PRODUCT_REVIEW_CREATE)
+  async proxyUpdateProductReview(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToProduct(req, res, `/v1/products/reviews/${req.params.reviewId}`);
+  }
+
+  // Dọn asset review upload dở dang qua Product Service để Media Service vẫn được bảo vệ bằng owner scope.
+  @Post("reviews/media/cleanup")
+  @RequirePermissions(Permission.PRODUCT_REVIEW_CREATE)
+  async proxyCleanupUploadedReviewMedia(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToProduct(req, res, "/v1/products/reviews/media/cleanup");
+  }
+
+  // Customer đã đăng nhập có thể thích review; permission review hiện tại được dùng chung cho thao tác tương tác review.
+  @Put("reviews/:reviewId/like")
+  @RequirePermissions(Permission.PRODUCT_REVIEW_CREATE)
+  async proxyLikeProductReview(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToProduct(req, res, `/v1/reviews/${req.params.reviewId}/like`);
+  }
+
+  // Bỏ like qua cùng boundary để user context và CSRF được kiểm tra như lúc thêm like.
+  @Delete("reviews/:reviewId/like")
+  @RequirePermissions(Permission.PRODUCT_REVIEW_CREATE)
+  async proxyUnlikeProductReview(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToProduct(req, res, `/v1/reviews/${req.params.reviewId}/like`);
   }
 
   // Giữ nguyên path, query và user context khi chuyển request sang Product Service.

@@ -61,6 +61,21 @@ export class OrderProxyController {
     response.status(status).json(data);
   }
 
+  // Forward quyết định nhận hàng sau khi Gateway đã xác thực JWT và permission customer tương ứng.
+  @Post(":orderId/delivery-confirmation")
+  @RequirePermissions(Permission.ORDER_CONFIRM_DELIVERY)
+  async proxyDeliveryConfirmation(
+    @Param("orderId") orderId: string,
+    @Req() request: Request,
+    @Res() response: Response,
+  ): Promise<void> {
+    const { data, status } = await this.proxyService.forward(
+      `${this.targetBase}/api/v1/orders/${orderId}/delivery-confirmation`,
+      request,
+    );
+    response.status(status).json(data);
+  }
+
   // Customer tạo return request cho order của chính mình; Order Service kiểm tra điều kiện 7 ngày.
   @Post(":orderId/returns")
   @RequirePermissions(Permission.ORDER_READ)
