@@ -1,6 +1,6 @@
 // File này forward customer tracking và để Shipping Service kiểm tra owner lần cuối.
 
-import { Controller, Get, Param, Req, Res } from '@nestjs/common';
+import { Controller, Get, Param, Post, Req, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { Permission } from '@common/auth';
@@ -21,6 +21,14 @@ export class CustomerShippingProxyController {
   @RequirePermissions(Permission.SHIPPING_TRACKING_READ)
   async get(@Param('orderId') orderId: string, @Req() request: Request, @Res() response: Response): Promise<void> {
     const result = await this.proxyService.forward(`${this.targetBase}/api/v1/orders/${orderId}/tracking`, request);
+    response.status(result.status).json(result.data);
+  }
+
+  // Customer chỉ được bỏ qua một chặng của đúng return request sau khi Shipping Service kiểm tra ownership.
+  @Post('returns/:returnId/shipment/demo/advance')
+  @RequirePermissions(Permission.SHIPPING_TRACKING_READ)
+  async advanceReturnDemo(@Param('returnId') returnId: string, @Req() request: Request, @Res() response: Response): Promise<void> {
+    const result = await this.proxyService.forward(`${this.targetBase}/api/v1/orders/returns/${returnId}/shipment/demo/advance`, request);
     response.status(result.status).json(result.data);
   }
 }

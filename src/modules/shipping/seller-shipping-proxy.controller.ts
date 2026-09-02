@@ -30,6 +30,13 @@ export class SellerShippingProxyController {
     await this.forward(`/api/v1/seller/orders/${orderId}/shipment`, request, response);
   }
 
+  // Tạo vận đơn chiều ngược cho một return request đã được duyệt.
+  @Post("returns/:returnId/shipment")
+  @RequirePermissions(Permission.SELLER_SHIPPING_MANAGE)
+  async createReturn(@Param("returnId") returnId: string, @Req() request: Request, @Res() response: Response): Promise<void> {
+    await this.forward(`/api/v1/seller/orders/returns/${returnId}/shipment`, request, response);
+  }
+
   // Làm mới tracking từ provider, không tự chuyển trạng thái ở browser.
   @Post(":orderId/shipment/refresh")
   @RequirePermissions(Permission.SELLER_SHIPPING_READ)

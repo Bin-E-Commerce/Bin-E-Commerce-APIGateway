@@ -37,6 +37,14 @@ export class SellerOrderProxyController {
     response.status(status).json(data);
   }
 
+  // Seller đọc hàng chờ return theo shop scope do Order Service resolve.
+  @Get("returns")
+  @RequirePermissions(Permission.RETURN_READ)
+  async proxyReturnList(@Req() request: Request, @Res() response: Response): Promise<void> {
+    const { data, status } = await this.proxyService.forward(`${this.targetBase}/api/v1/seller/orders/returns`, request);
+    response.status(status).json(data);
+  }
+
   // Forward detail theo orderId; Order Service kiểm tra lại item thuộc shop hiện tại.
   @Get(":orderId")
   @RequirePermissions(Permission.SELLER_ORDER_READ)
@@ -53,18 +61,26 @@ export class SellerOrderProxyController {
   }
 
   // Seller xử lý return request chỉ trong shop scope do Order Service resolve từ JWT.
-  @Post(":orderId/returns/:returnId/approve")
-  @RequirePermissions(Permission.SELLER_ORDER_MANAGE)
-  async approveReturn(@Param("orderId") orderId: string, @Param("returnId") returnId: string, @Req() request: Request, @Res() response: Response): Promise<void> {
-    const { data, status } = await this.proxyService.forward(`${this.targetBase}/api/v1/seller/orders/${orderId}/returns/${returnId}/approve`, request);
+  @Post("returns/:returnId/approve")
+  @RequirePermissions(Permission.RETURN_REVIEW)
+  async approveReturn(@Param("returnId") returnId: string, @Req() request: Request, @Res() response: Response): Promise<void> {
+    const { data, status } = await this.proxyService.forward(`${this.targetBase}/api/v1/seller/orders/returns/${returnId}/approve`, request);
     response.status(status).json(data);
   }
 
   // Seller từ chối return request với ghi chú tùy chọn.
-  @Post(":orderId/returns/:returnId/reject")
-  @RequirePermissions(Permission.SELLER_ORDER_MANAGE)
-  async rejectReturn(@Param("orderId") orderId: string, @Param("returnId") returnId: string, @Req() request: Request, @Res() response: Response): Promise<void> {
-    const { data, status } = await this.proxyService.forward(`${this.targetBase}/api/v1/seller/orders/${orderId}/returns/${returnId}/reject`, request);
+  @Post("returns/:returnId/reject")
+  @RequirePermissions(Permission.RETURN_REVIEW)
+  async rejectReturn(@Param("returnId") returnId: string, @Req() request: Request, @Res() response: Response): Promise<void> {
+    const { data, status } = await this.proxyService.forward(`${this.targetBase}/api/v1/seller/orders/returns/${returnId}/reject`, request);
+    response.status(status).json(data);
+  }
+
+  // Seller ghi nhận hàng hoàn đạt hoặc không đạt kiểm tra.
+  @Post("returns/:returnId/inspection")
+  @RequirePermissions(Permission.RETURN_INSPECT)
+  async inspectReturn(@Param("returnId") returnId: string, @Req() request: Request, @Res() response: Response): Promise<void> {
+    const { data, status } = await this.proxyService.forward(`${this.targetBase}/api/v1/seller/orders/returns/${returnId}/inspection`, request);
     response.status(status).json(data);
   }
 }

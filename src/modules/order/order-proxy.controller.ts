@@ -78,7 +78,7 @@ export class OrderProxyController {
 
   // Customer tạo return request cho order của chính mình; Order Service kiểm tra điều kiện 7 ngày.
   @Post(":orderId/returns")
-  @RequirePermissions(Permission.ORDER_READ)
+  @RequirePermissions(Permission.RETURN_CREATE)
   async proxyCreateReturn(@Param("orderId") orderId: string, @Req() request: Request, @Res() response: Response): Promise<void> {
     const { data, status } = await this.proxyService.forward(`${this.targetBase}/api/v1/orders/${orderId}/returns`, request);
     response.status(status).json(data);
@@ -86,9 +86,25 @@ export class OrderProxyController {
 
   // Customer đọc return history thuộc order hiện tại.
   @Get(":orderId/returns")
-  @RequirePermissions(Permission.ORDER_READ)
+  @RequirePermissions(Permission.RETURN_READ)
   async proxyListReturns(@Param("orderId") orderId: string, @Req() request: Request, @Res() response: Response): Promise<void> {
     const { data, status } = await this.proxyService.forward(`${this.targetBase}/api/v1/orders/${orderId}/returns`, request);
+    response.status(status).json(data);
+  }
+
+  // Customer đọc detail return độc lập với detail order.
+  @Get("returns/:returnId")
+  @RequirePermissions(Permission.RETURN_READ)
+  async proxyReturnDetail(@Param("returnId") returnId: string, @Req() request: Request, @Res() response: Response): Promise<void> {
+    const { data, status } = await this.proxyService.forward(`${this.targetBase}/api/v1/orders/returns/${returnId}`, request);
+    response.status(status).json(data);
+  }
+
+  // Customer hủy return request khi seller chưa xử lý.
+  @Post("returns/:returnId/cancellation")
+  @RequirePermissions(Permission.RETURN_CANCEL)
+  async proxyCancelReturn(@Param("returnId") returnId: string, @Req() request: Request, @Res() response: Response): Promise<void> {
+    const { data, status } = await this.proxyService.forward(`${this.targetBase}/api/v1/orders/returns/${returnId}/cancellation`, request);
     response.status(status).json(data);
   }
 
