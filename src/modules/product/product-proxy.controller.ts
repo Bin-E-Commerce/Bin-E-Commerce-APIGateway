@@ -94,6 +94,16 @@ export class ProductProxyController {
     );
   }
 
+  // Summary shop là dữ liệu public để trang shop tải header độc lập với danh sách sản phẩm.
+  @Public()
+  @Get("shops/:shopId/summary")
+  async proxyPublicShopSummary(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToProduct(req, res);
+  }
+
   // Chuyển yêu cầu xóa mềm tới Product Service với permission delete riêng của seller.
   @Delete("seller/:productId")
   @RequirePermissions(Permission.SELLER_PRODUCT_DELETE)

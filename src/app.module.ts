@@ -26,6 +26,7 @@ import { RealtimeNotificationsModule } from "./modules/realtime-notifications/re
 import { CartProxyModule } from "./modules/cart/cart-proxy.module";
 import { OrderProxyModule } from "./modules/order/order-proxy.module";
 import { ShippingProxyModule } from "./modules/shipping/shipping-proxy.module";
+import { ShopProxyModule } from "./modules/shop/shop-proxy.module";
 
 @Module({
   imports: [
@@ -69,6 +70,7 @@ import { ShippingProxyModule } from "./modules/shipping/shipping-proxy.module";
     CartProxyModule,
     OrderProxyModule,
     ShippingProxyModule,
+    ShopProxyModule,
   ],
   providers: [
     {
