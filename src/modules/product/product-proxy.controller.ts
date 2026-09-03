@@ -104,6 +104,26 @@ export class ProductProxyController {
     await this.proxyToProduct(req, res);
   }
 
+  // Shop crawl được công bố như một shop nội bộ; Gateway chỉ forward read request và không trả source URL cho client.
+  @Public()
+  @Get("external-shops/:slug")
+  async proxyPublicExternalShop(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToProduct(req, res);
+  }
+
+  // Catalog của shop crawl dùng external shop UUID để tách khỏi seller shop nội bộ nhưng vẫn đi qua public API chung.
+  @Public()
+  @Get("external-shops/:shopId/summary")
+  async proxyPublicExternalShopSummary(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.proxyToProduct(req, res);
+  }
+
   // Chuyển yêu cầu xóa mềm tới Product Service với permission delete riêng của seller.
   @Delete("seller/:productId")
   @RequirePermissions(Permission.SELLER_PRODUCT_DELETE)

@@ -18,6 +18,13 @@ export class ShopProxyController {
     this.targetBase = config.get<string>("SELLER_SERVICE_URL", "http://seller-service:3007");
   }
 
+  // Public catalog shop đi qua Gateway để customer chỉ cần biết một API entrypoint duy nhất.
+  @Get()
+  @AllowGuest()
+  async proxyPublicShopList(@Req() req: Request, @Res() res: Response): Promise<void> {
+    await this.proxyToSeller(req, res);
+  }
+
   // Trang shop là dữ liệu public nhưng AllowGuest vẫn cho phép gửi identity nếu user đã đăng nhập.
   @Get(":identifier")
   @AllowGuest()
