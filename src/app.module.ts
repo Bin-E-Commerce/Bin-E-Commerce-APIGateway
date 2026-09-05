@@ -27,6 +27,7 @@ import { CartProxyModule } from "./modules/cart/cart-proxy.module";
 import { OrderProxyModule } from "./modules/order/order-proxy.module";
 import { ShippingProxyModule } from "./modules/shipping/shipping-proxy.module";
 import { ShopProxyModule } from "./modules/shop/shop-proxy.module";
+import { RecommendationProxyModule } from "./modules/recommendation/recommendation-proxy.module";
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { ShopProxyModule } from "./modules/shop/shop-proxy.module";
     OrderProxyModule,
     ShippingProxyModule,
     ShopProxyModule,
+    RecommendationProxyModule,
   ],
   providers: [
     {
