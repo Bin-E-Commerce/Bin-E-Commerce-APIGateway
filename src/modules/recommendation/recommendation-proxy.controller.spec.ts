@@ -37,7 +37,7 @@ describe("RecommendationProxyController", () => {
 
     // Assert
     expect(proxyService.forward).toHaveBeenCalledWith(
-      "http://recommendation-service:3006/api/v1/recommendation/events",
+      "http://localhost:3006/api/v1/recommendation/events",
       request,
     );
     expect(response.status).toHaveBeenCalledWith(202);

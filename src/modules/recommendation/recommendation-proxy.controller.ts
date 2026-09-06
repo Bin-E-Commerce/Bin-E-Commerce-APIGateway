@@ -1,6 +1,6 @@
 // Controller này mở một ingestion endpoint thống nhất cho Web nhưng không sở hữu logic recommendation hay event storage.
 
-import { Controller, Post, Req, Res } from "@nestjs/common";
+import { Controller, Get, Post, Req, Res } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Request, Response } from "express";
 import { AllowGuest } from "../../common/decorators/allow-guest.decorator";
@@ -33,6 +33,33 @@ export class RecommendationProxyController {
   ): Promise<void> {
     const { data, status } = await this.proxyService.forward(
       `${this.targetBase}/api/v1/recommendation/events`,
+      request,
+    );
+    response.status(status).json(data);
+  }
+
+  // Cho guest xem page đầu và user xem recommendation đã xếp hạng; identity/session được forward bởi ProxyService.
+  @Get("recommendations")
+  @AllowGuest()
+  async proxyRecommendations(
+    @Req() request: Request,
+    @Res() response: Response,
+  ): Promise<void> {
+    const { data, status } = await this.proxyService.forward(
+      `${this.targetBase}/api/v1/recommendation/recommendations`,
+      request,
+    );
+    response.status(status).json(data);
+  }
+
+  // Chỉ user đã xác thực mới được merge session; Recommendation tự kiểm tra user header tin cậy và tính idempotent.
+  @Post("profile/merge")
+  async mergeGuestProfile(
+    @Req() request: Request,
+    @Res() response: Response,
+  ): Promise<void> {
+    const { data, status } = await this.proxyService.forward(
+      `${this.targetBase}/api/v1/recommendation/profile/merge`,
       request,
     );
     response.status(status).json(data);
