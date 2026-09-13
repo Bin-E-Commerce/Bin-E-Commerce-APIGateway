@@ -16,11 +16,13 @@ export class RecommendationProxyController {
     config: ConfigService,
     private readonly proxyService: ProxyService,
   ) {
-    this.targetBase = config.get<string>(
-      "RECOMMENDATION_SERVICE_URL",
-      // Khi chạy Gateway trực tiếp trên host, Docker DNS không tồn tại; Docker Compose sẽ override bằng service name.
-      "http://localhost:3006",
-    );
+    this.targetBase = config
+      .get<string>(
+        "RECOMMENDATION_SERVICE_URL",
+        // Khi chạy Gateway trực tiếp trên host, Docker DNS không tồn tại; Docker Compose sẽ override bằng service name.
+        "http://localhost:3006",
+      )
+      .replace(/\/$/, "");
   }
 
   // Cho phép guest session và user đã đăng nhập; identity hợp lệ sẽ được JwtAuthGuard forward qua ProxyService.
@@ -39,6 +41,21 @@ export class RecommendationProxyController {
   }
 
   // Cho guest xem page đầu và user xem recommendation đã xếp hạng; identity/session được forward bởi ProxyService.
+  // Forward batch impression theo cùng auth/session boundary; Gateway không parse hay thay đổi event payload.
+  @Post("events/batch")
+  @AllowGuest()
+  @SkipCsrf()
+  async proxyInteractionEventBatch(
+    @Req() request: Request,
+    @Res() response: Response,
+  ): Promise<void> {
+    const { data, status } = await this.proxyService.forward(
+      this.targetBase + "/api/v1/recommendation/events/batch",
+      request,
+    );
+    response.status(status).json(data);
+  }
+
   @Get("recommendations")
   @AllowGuest()
   async proxyRecommendations(

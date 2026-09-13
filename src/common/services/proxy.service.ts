@@ -30,6 +30,7 @@ export class ProxyService {
   async forward(
     targetUrl: string,
     req: Request,
+    additionalHeaders: Record<string, string> = {},
   ): Promise<{
     data: unknown;
     status: number;
@@ -43,6 +44,8 @@ export class ProxyService {
       params: req.query, // Forward query parameters, ví dụ như ?page=1&limit=10
       validateStatus: () => true, // Cho phép xử lý tất cả các status code trong response, không tự động throw lỗi cho status >= 400 để chúng ta có thể trả về đúng lỗi từ upstream service cho client
     };
+    // Header nội bộ được thêm sau context client để browser không thể ghi đè service identity.
+    Object.assign(config.headers as Record<string, string>, additionalHeaders);
 
     try {
       // Thực hiện request đến targetUrl bằng HttpService và chờ response
