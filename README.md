@@ -10,11 +10,11 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs&logoColor=white" alt="NestJS 11" />
-  <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Redis-5.10-DC382D?logo=redis&logoColor=white" alt="Redis" />
+  <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript 5.7" />
+  <img src="https://img.shields.io/badge/Redis-5.10-DC382D?logo=redis&logoColor=white" alt="Redis 5.10" />
   <img src="https://img.shields.io/badge/Keycloak-JWT-4D4D4D?logo=keycloak&logoColor=white" alt="Keycloak and JWT" />
-  <img src="https://img.shields.io/badge/Socket.IO-4.8-010101?logo=socket.io&logoColor=white" alt="Socket.IO" />
-  <img src="https://img.shields.io/badge/Axios-HTTP-5A29E4?logo=axios&logoColor=white" alt="Axios" />
+  <img src="https://img.shields.io/badge/Socket.IO-4.8-010101?logo=socket.io&logoColor=white" alt="Socket.IO 4.8" />
+  <img src="https://img.shields.io/badge/Axios-HTTP-5A29E4?logo=axios&logoColor=white" alt="Axios HTTP client" />
 </p>
 
 ## Contents
@@ -23,115 +23,117 @@
 2. [Service at a glance](#2-service-at-a-glance)
 3. [Core capabilities](#3-core-capabilities)
 4. [Trust surface](#4-trust-surface)
-5. [See It Work](#5-see-it-work)
+5. [See it work](#5-see-it-work)
 6. [Install](#6-install)
-7. [Getting Started](#7-getting-started)
-8. [How It Works](#8-how-it-works)
-9. [Security Pipeline](#9-security-pipeline)
-10. [Service Boundary](#10-service-boundary)
-11. [Service Communication](#11-service-communication)
-12. [Route Map](#12-route-map)
-13. [Realtime Notifications](#13-realtime-notifications)
-14. [Project Structure](#14-project-structure)
-15. [Configuration Reference](#15-configuration-reference)
+7. [Getting started](#7-getting-started)
+8. [How it works](#8-how-it-works)
+9. [Security pipeline](#9-security-pipeline)
+10. [Service boundary](#10-service-boundary)
+11. [Service communication](#11-service-communication)
+12. [Route map](#12-route-map)
+13. [Realtime notifications](#13-realtime-notifications)
+14. [Project structure](#14-project-structure)
+15. [Configuration reference](#15-configuration-reference)
 16. [Development](#16-development)
-17. [Engineering Decisions](#17-engineering-decisions)
-18. [Operational Notes](#18-operational-notes)
-19. [Documentation Findings](#19-documentation-findings)
+17. [Engineering decisions](#17-engineering-decisions)
+18. [Operational notes](#18-operational-notes)
+19. [Documentation findings](#19-documentation-findings)
 20. [FAQ](#20-faq)
 21. [Ownership](#21-ownership)
 
 ## 1. Problem
 
-Bin E-Commerce có nhiều microservice, mỗi service có domain, port, contract và cơ chế bảo vệ riêng. Nếu frontend gọi trực tiếp từng service, client sẽ phải biết quá nhiều địa chỉ nội bộ và tự lặp lại các bước xác thực, forward identity, xử lý CORS hoặc retry.
+Bin E-Commerce has multiple services, each with its own domain, port, contract and security rules. If the frontend calls every service directly, the client must know internal addresses and repeat authentication, identity forwarding, CORS and retry behavior.
 
-API Gateway giải quyết bài toán đó bằng một edge layer duy nhất:
+The API Gateway solves that coordination problem with one edge layer:
 
-- Browser chỉ cần biết một origin `/api`.
-- Token được kiểm tra tại một điểm trước khi request đi sâu vào hệ thống.
-- Identity context được chuẩn hóa thành các header nội bộ để downstream không phải giải mã token lại.
-- Permission động được lấy từ Auth Service, không hard-code ở Gateway.
-- Route được chuyển đến service sở hữu nghiệp vụ thay vì đưa business logic vào gateway.
-- Notification realtime đi qua cùng một entry point nhưng vẫn dùng Redis để fan-out giữa nhiều instance.
+- the browser only needs one `/api` origin;
+- tokens are verified before a request enters the internal service network;
+- verified identity is normalized into trusted internal context headers;
+- current permissions are resolved from Auth Service instead of being hard-coded in the Gateway;
+- requests are routed to the service that owns the business capability;
+- realtime notifications use the same public entry point while Redis provides multi-instance fan-out.
 
-Gateway không phải nơi lưu sản phẩm, đơn hàng hay policy nghiệp vụ. Nó là lớp kiểm soát và kết nối ở biên hệ thống.
+The Gateway does not own products, orders or business policies. It owns the edge connection and request protection around those domains.
 
 ## 2. Service at a glance
 
-| Thuộc tính | Giá trị |
+| Property | Value |
 | --- | --- |
 | Service | `api-gateway` |
 | Runtime | Node.js + NestJS 11 |
 | Language | TypeScript 5.7 |
-| HTTP port mặc định | `3001` |
+| Default HTTP port | `3001` |
 | External prefix | `/api` |
-| API versioning | URI versioning, mặc định `v1` |
-| API docs | `/docs` khi `NODE_ENV` khác `production` |
+| API versioning | URI versioning, default `v1` |
+| API documentation | `/docs` outside production |
 | Health check | `/api/health` |
 | Authentication | Keycloak JWKS + JWT RS256 |
-| Rate limiting | Redis-backed throttling, mặc định 100 request / 60 giây |
+| Rate limiting | Redis-backed throttling, default 100 requests / 60 seconds |
 | Realtime | Socket.IO namespace `/notifications` |
-| Persistence ownership | Không sở hữu database nghiệp vụ |
+| Business persistence | None owned by the Gateway |
 
-### Mục tiêu của service
+### The service objective
 
-Gateway nên trả lời tốt ba câu hỏi cho mỗi request:
+For every request, the Gateway should answer three questions:
 
-1. Request này có được phép đi vào hệ thống không?
-2. Request này thuộc user/session nào và downstream cần biết context gì?
-3. Request này phải được chuyển đến service nào, với contract nào?
+1. Is this request allowed to enter the system?
+2. Which user or session does this request belong to, and what context must downstream receive?
+3. Which service owns the requested contract?
 
 ## 3. Core capabilities
 
-### 3.1. Một cửa cho HTTP API
+### 3.1. One HTTP entry point
 
-Global prefix `/api` và URI versioning giúp các client dùng contract ổn định dạng `/api/v1/...`. Controller proxy chỉ định tuyến, forward body/query/header và trả nguyên status/data/header phù hợp từ upstream.
+The global `/api` prefix and URI versioning provide a stable client contract such as `/api/v1/...`. Proxy controllers route requests, forward the permitted body/query/headers, and preserve the upstream status and response data.
 
-### 3.2. Xác thực JWT tập trung
+### 3.2. JWT verification with Keycloak JWKS
 
-Gateway tải public key từ Keycloak JWKS, kiểm tra issuer và thuật toán `RS256`, sau đó đặt identity đã xác minh vào request context. Client không thể tự gửi `x-user-id` để giả danh vì các header context chỉ được chấp nhận sau bước verify và header bổ sung từ Gateway được áp sau header của client.
+The Gateway loads public keys from Keycloak JWKS and verifies the issuer, signature and `RS256` algorithm. After successful verification, the authenticated identity is attached to the request context.
 
-### 3.3. Permission động
+Client-supplied identity headers are not trusted. Headers such as `x-user-id` are accepted as trusted context only after the Gateway has verified the token and injected its own values.
 
-Role trong token được chuẩn hóa, sau đó Gateway gọi `GET /api/v1/auth/me` của Auth Service để lấy permission/name/avatar mới nhất. Route có `@RequirePermissions(...)` được kiểm tra bởi `PermissionsGuard` trước khi forward.
+### 3.3. Dynamic permission resolution
 
-### 3.4. Proxy thống nhất
+Token roles are normalized and the Gateway can call `GET /api/v1/auth/me` on Auth Service to resolve the latest permission, display name and avatar context. Routes decorated with `@RequirePermissions(...)` are checked by `PermissionsGuard` before forwarding.
 
-`ProxyService` gom logic HTTP forwarding, chọn header được phép chuyển tiếp, giữ status/data/response headers từ upstream và chuyển lỗi kết nối thành `503 Service Unavailable`.
+### 3.4. Consistent proxy behavior
 
-### 3.5. Bảo vệ lớp edge
+`ProxyService` centralizes HTTP forwarding, allowed-header selection, response preservation and connection error handling. A downstream network failure is converted into `503 Service Unavailable`; a business `4xx` or `5xx` response remains visible to the client.
 
-Service bật Helmet, CORS có allow-list, CSRF defense cho request thay đổi dữ liệu và throttling lưu trong Redis. Các policy này chạy ở global guard level để mọi module có cùng nguyên tắc.
+### 3.5. Edge protection
 
-### 3.6. Notification realtime
+The service applies Helmet, an allow-listed CORS policy, CSRF protection for state-changing requests and Redis-backed throttling. These protections run at the global boundary so every module follows the same baseline.
 
-Socket.IO xác thực token trong handshake, join user/role/permission room và nhận event từ Redis pub/sub. Khi chạy nhiều instance, mỗi instance có subscriber riêng để đẩy notification đến client đang kết nối tại instance đó.
+### 3.6. Realtime notifications
+
+Socket.IO authenticates the handshake, joins user/role/permission rooms and receives events from Redis pub/sub. With multiple Gateway instances, each instance subscribes independently and emits to the clients connected to that instance.
 
 ## 4. Trust surface
 
 <details>
-<summary>Request nào được Gateway tin và request nào không?</summary>
+<summary>What does the Gateway trust, and what does it reject?</summary>
 
-Gateway tin các dữ liệu sau sau khi đã kiểm tra nguồn:
+The Gateway trusts the following only after validating their source:
 
-- JWT signature, issuer và thời hạn từ Keycloak.
-- Identity và permission được Auth Service trả về cho user đã xác minh.
-- Header nội bộ do chính Gateway inject sau guard pipeline.
-- Response status/data từ upstream, nhưng không tự biến nó thành business truth.
+- JWT signature, issuer and expiration issued by Keycloak;
+- identity and permissions resolved for the verified user;
+- internal context headers injected by the Gateway after the guard pipeline;
+- upstream response status and data, without treating them as Gateway-owned business truth.
 
-Gateway không tin:
+The Gateway rejects or ignores:
 
-- `x-user-id`, `x-user-roles` hoặc `x-user-permissions` do browser tự gửi.
-- Permission được suy ra chỉ từ một role string mà không qua Auth Service.
-- Origin không nằm trong `ALLOWED_ORIGINS`.
-- Request mutation thiếu `X-Requested-With: XMLHttpRequest`.
-- WebSocket token truyền qua query string.
+- `x-user-id`, `x-user-roles` and `x-user-permissions` supplied by a browser;
+- permissions inferred from a role string without the configured authorization flow;
+- origins that are not included in `ALLOWED_ORIGINS`;
+- mutation requests that do not satisfy the CSRF request marker policy;
+- WebSocket tokens supplied through a query string.
 
 </details>
 
-## 5. See It Work
+## 5. See it work
 
-### 5.1. Khởi động Gateway
+### 5.1. Start the Gateway
 
 ```powershell
 cd services/api-gateway
@@ -140,61 +142,61 @@ npm install
 npm run dev
 ```
 
-### 5.2. Kiểm tra health
+### 5.2. Check health
 
 ```powershell
 curl http://localhost:3001/api/health
 ```
 
-Health endpoint kiểm tra process và trả thông tin môi trường cơ bản. Nó không thay thế việc kiểm tra đầy đủ Keycloak, Redis và downstream service.
+The health endpoint confirms that the process is listening and returns basic environment information. It does not replace a full Keycloak, Redis or downstream dependency check.
 
-### 5.3. Mở API documentation
+### 5.3. Open API documentation
 
-Khi chạy ở development, mở:
+When running outside production, open:
 
 ```text
 http://localhost:3001/docs
 ```
 
-Swagger có bearer authentication để thử các route cần JWT. Token phải là token hợp lệ do Keycloak cấp; không dùng token giả hoặc header identity tự tạo.
+Swagger includes bearer authentication for protected routes. Use an access token issued by Keycloak; do not use a fabricated token or manually created identity headers.
 
-### 5.4. Thử một route qua Gateway
+### 5.4. Call a route through the Gateway
 
 ```powershell
 curl http://localhost:3001/api/v1/products
 ```
 
-Với route yêu cầu đăng nhập, request không có bearer token sẽ bị chặn tại Gateway. Khi có token:
+For a protected route:
 
 ```powershell
-curl http://localhost:3001/api/v1/products `
+curl http://localhost:3001/api/v1/products \
   -H "Authorization: Bearer <keycloak-access-token>"
 ```
 
-Kết quả cuối cùng phụ thuộc Product Service và dữ liệu môi trường đang chạy.
+The final response depends on Product Service and the data available in the running environment.
 
 ## 6. Install
 
 > [!IMPORTANT]
-> API Gateway là edge service nên cần các dependency runtime ở ngoài process: Keycloak để verify JWKS, Redis để throttle/realtime, và các downstream HTTP service tương ứng với route bạn muốn test. Gateway không sở hữu database nghiệp vụ.
+> The Gateway depends on runtime services outside its process: Keycloak for JWKS verification, Redis for throttling and realtime delivery, and the downstream HTTP services for the routes being tested. The Gateway does not own a business database.
 
-### Điều cần chuẩn bị
+### Prerequisites
 
-- Node.js tương thích với workspace và npm.
-- Keycloak realm `bin-ecommerce` đang phát hành access token.
-- Redis đang chạy và có thể truy cập bằng `REDIS_HOST`/`REDIS_PORT`.
-- Auth Service để resolve permission động.
-- Downstream service cần dùng: Product, Catalog, Seller, Order, Cart, Recommendation, AI, Notification, Shipping hoặc Media.
+- Node.js and npm versions supported by the workspace.
+- A Keycloak realm named `bin-ecommerce` that issues access tokens.
+- Redis reachable through `REDIS_HOST` and `REDIS_PORT`.
+- Auth Service available for dynamic permission resolution.
+- Any downstream service required by the route under test.
 
-### Tính đảo ngược
+### Reversibility
 
-Đây là service stateless ở tầng ứng dụng. Có thể dừng process, thay biến môi trường hoặc đưa traffic về instance khác mà không cần rollback dữ liệu của Gateway. Việc rollback business data thuộc service sở hữu dữ liệu.
+The Gateway is stateless at the application layer. It can be stopped, reconfigured or moved to another instance without rolling back Gateway-owned business data because it owns none. Business-data rollback belongs to the service that owns that data.
 
-## 7. Getting Started
+## 7. Getting started
 
-### Chạy local tối thiểu
+### Minimal local run
 
-Nếu chỉ cần kiểm tra bootstrap và health, có thể chạy Gateway cùng Redis và cấu hình `.env` tối thiểu. Nếu muốn gọi route được bảo vệ, cần thêm Keycloak và Auth Service. Nếu muốn gọi route proxy, service đích cũng phải sẵn sàng ở URL tương ứng.
+To verify bootstrap and health, run the Gateway with Redis and the minimum `.env` configuration. Protected routes additionally require Keycloak and Auth Service. Proxy routes also require the selected downstream service to be available at its configured URL.
 
 ```powershell
 cd services/api-gateway
@@ -202,222 +204,185 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
-### Luồng kiểm tra đề xuất
+### Recommended verification order
 
-1. Gọi `/api/health` để xác nhận process đã listen.
-2. Mở `/docs` để kiểm tra route metadata.
-3. Gọi route public hoặc guest nếu có.
-4. Đăng nhập qua Auth Service/Keycloak để lấy access token.
-5. Authorize token trong Swagger hoặc gửi bearer token bằng curl.
-6. Kiểm tra log và response status của downstream khi thử route nghiệp vụ.
+1. Call `/api/health` and confirm the process is listening.
+2. Open `/docs` and verify route metadata.
+3. Call a public or guest route.
+4. Authenticate through Keycloak/Auth Service and obtain an access token.
+5. Authorize the token in Swagger or send it with curl.
+6. Inspect Gateway and downstream status codes while testing a business route.
 
-### Build production
+### Production build
 
 ```powershell
 npm run build
 npm run start
 ```
 
-Production không expose Swagger vì `main.ts` chỉ đăng ký `/docs` ngoài môi trường `production`.
+Swagger is not exposed in production because `main.ts` registers `/docs` only outside the `production` environment.
 
-## 8. How It Works
-
-### 8.1. HTTP request flow
-
-```text
-Browser / Web App
-      |
-      v
-API Gateway :3001
-      |
-      +--> ThrottlerGuard --------> Redis counter
-      |
-      +--> CsrfGuard ------------- > mutation request policy
-      |
-      +--> JwtAuthGuard ---------- > Keycloak JWKS
-      |          |
-      |          +----------------> Auth Service /auth/me
-      |
-      +--> PermissionsGuard ------> route permission metadata
-      |
-      +--> ProxyService ----------> downstream service
-```
-
-Global prefix `/api` được áp trước route controller; URI versioning thêm `v1` cho các route versioned. Health endpoint là `/api/health` vì controller health không nằm trong versioned group theo cách khai báo hiện tại.
-
-### 8.2. Forwarding flow
-
-`ProxyService.forward()` giữ method, body, query và các header nằm trong allow-list. Gateway thêm context identity sau đó gọi Axios với `validateStatus` cho phép giữ response status của upstream. Vì vậy lỗi business `4xx/5xx` của downstream không bị biến thành một lỗi thành công ở Gateway.
+## 8. How it works
 
 ```text
 Client request
-   -> validate + enrich context
-   -> Axios downstream
-      -> upstream response: giữ status/data/headers
-      -> network error: 503 Service Unavailable
+    │
+    ▼
+ThrottlerGuard ───────► Redis rate-limit counter
+    │
+    ▼
+CsrfGuard ────────────► mutation request policy
+    │
+    ▼
+JwtAuthGuard ─────────► Keycloak JWKS + Auth Service context
+    │
+    ▼
+PermissionsGuard ─────► route permission metadata
+    │
+    ▼
+ProxyService ─────────► downstream service
+    │
+    ▼
+Preserved upstream response
 ```
 
-Binary response như label vận chuyển dùng đường `forwardBinary()` để giữ `arraybuffer` và content headers cần thiết.
+The global `/api` prefix is applied before controller routes. URI versioning adds `v1` to versioned routes. The health controller remains available at `/api/health` because it is not placed in the versioned controller group.
 
-## 9. Security Pipeline
+### 8.1. Forwarding flow
 
-### 9.1. Thứ tự guard
+`ProxyService.forward()` preserves the method, body, query and allowed headers. The Gateway adds verified identity context and calls Axios with status validation configured to preserve the upstream status.
 
-Thứ tự global hiện tại là một invariant quan trọng:
+```text
+Client request
+  → validate and enrich trusted context
+  → Axios downstream request
+  → upstream response: preserve status, data and allowed headers
+  → network error: return 503 Service Unavailable
+```
 
-| Thứ tự | Guard | Trách nhiệm |
-| ---: | --- | --- |
-| 1 | `ThrottlerGuard` | Giới hạn tần suất theo storage Redis |
-| 2 | `CsrfGuard` | Chặn mutation không có request marker hợp lệ |
-| 3 | `JwtAuthGuard` | Verify JWT, resolve context và xử lý guest |
-| 4 | `PermissionsGuard` | Kiểm tra permission của route |
+Binary responses such as shipping labels use `forwardBinary()` to preserve the `arraybuffer` body and required content headers.
 
-Thay đổi thứ tự có thể làm permission chạy trước khi identity được inject hoặc làm request bất hợp lệ đi xa hơn cần thiết.
+## 9. Security pipeline
 
-### 9.2. JWT và JWKS
+### 9.1. Guard order
 
-`JwksService` xây issuer từ `KEYCLOAK_URL` và `KEYCLOAK_REALM`, dùng endpoint:
+The current global order is an important invariant:
+
+| Order | Guard | Responsibility |
+| --- | --- | --- |
+| 1 | `ThrottlerGuard` | Limit request frequency using Redis storage |
+| 2 | `CsrfGuard` | Reject mutations without a valid request marker |
+| 3 | `JwtAuthGuard` | Verify JWT, resolve context and handle guest access |
+| 4 | `PermissionsGuard` | Check permissions declared by route metadata |
+
+Changing this order can cause permission checks to run before identity injection or allow invalid requests to travel further than necessary.
+
+### 9.2. JWT and JWKS
+
+`JwksService` builds the issuer from `KEYCLOAK_URL` and `KEYCLOAK_REALM` and reads the certificate endpoint:
 
 ```text
 {KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs
 ```
 
-JWKS client bật cache public key tối đa một giờ và giới hạn 10 request mỗi phút. Token phải có issuer đúng và dùng `RS256`. Role được đọc từ claim trực tiếp, `realm_access` và `resource_access`, sau đó chuẩn hóa về business role.
+The JWKS client caches public keys for up to one hour and limits key refresh requests. Tokens must have the expected issuer and use `RS256`. Roles can be read from direct claims, `realm_access` and `resource_access`, then normalized into business roles.
 
 ### 9.3. Identity headers
 
-Các context header thường được forward:
+The trusted context may include:
 
 ```text
 x-user-id
 x-user-email
-x-user-name
-x-user-avatar-url
 x-user-roles
 x-user-permissions
 x-session-id
 x-request-id
 ```
 
-Downstream nên xem đây là context do trusted gateway cung cấp, không phải dữ liệu người dùng được phép sửa từ browser. Permission source vẫn là Auth Service; Gateway chỉ chuyển tiếp và áp route guard.
+Downstream services must treat these as Gateway-provided context, not as user-editable data. The Auth Service remains the source of permission truth.
 
-### 9.4. CORS, Helmet và CSRF
+### 9.4. CORS, Helmet and CSRF
 
-- Helmet bổ sung các HTTP security headers cơ bản.
-- CORS lấy allow-list từ `ALLOWED_ORIGINS` và bật credentials.
-- `GET`, `HEAD`, `OPTIONS` không cần CSRF marker.
-- Mutation request cần `X-Requested-With: XMLHttpRequest`, trừ route có `@SkipCsrf()`.
-- Route guest được đánh dấu riêng bằng `@AllowGuest()`; guest không được giữ các header identity spoofable.
+- Helmet adds baseline HTTP security headers.
+- CORS uses the `ALLOWED_ORIGINS` allow-list and supports credentials where configured.
+- `GET`, `HEAD` and `OPTIONS` do not require the CSRF marker.
+- Mutation requests require `X-Requested-With: XMLHttpRequest`, except routes explicitly decorated with `@SkipCsrf()`.
+- Guest routes are explicitly marked with `@AllowGuest()` and cannot retain spoofable identity headers.
 
-## 10. Service Boundary
+## 10. Service boundary
 
-### Gateway sở hữu
+### The Gateway owns
 
-- Public edge contract và API version prefix.
-- Route aggregation cho các domain đang được expose.
-- JWT verification và context propagation.
-- Permission guard ở boundary.
-- CORS, Helmet, CSRF, throttling và graceful shutdown.
-- Health endpoint và Swagger development surface.
-- Socket.IO notification namespace và Redis subscriber tại edge.
+- The public edge contract and API version prefix.
+- Route aggregation for exposed domain services.
+- JWT verification and trusted context propagation.
+- Permission checks at the edge boundary.
+- CORS, Helmet, CSRF, throttling and graceful shutdown.
+- Health checks and the development Swagger surface.
+- The Socket.IO notification namespace and Redis subscriber at the edge.
 
-### Gateway không sở hữu
+### The Gateway does not own
 
-- User credential, role/permission source of truth: thuộc Keycloak/Auth Service.
-- Product, cart, order, shipping, seller và recommendation data: thuộc service domain tương ứng.
-- Database nghiệp vụ hoặc migration riêng.
-- AI model, ranking policy và candidate pipeline.
-- Business retry, transaction hoặc compensation của downstream.
+- Credentials or the source of role/permission truth: Keycloak and Auth Service own these concerns.
+- Product, cart, order, shipping, seller or recommendation data.
+- A business database or business migrations.
+- AI models, ranking policy or candidate-generation rules.
+- Downstream transactions, compensation logic or domain-specific retry policy.
 
-Nguyên tắc này giữ controller proxy mỏng: nếu một quy tắc chỉ có ý nghĩa trong domain, đặt nó ở service domain thay vì thêm nhánh nghiệp vụ vào Gateway.
+Keep proxy controllers thin. If a rule has meaning only inside a domain, implement it in the owning domain service rather than adding business branches to the Gateway.
 
-## 11. Service Communication
+## 11. Service communication
 
-### 11.1. Synchronous HTTP
+| Downstream | Configuration | Gateway responsibility |
+| --- | --- | --- |
+| Keycloak | `KEYCLOAK_URL` | JWKS verification |
+| Auth Service | `AUTH_SERVICE_URL` | Auth flows, users, admin access and permission lookup |
+| Catalog Service | `CATALOG_SERVICE_URL` | Category and catalog proxy routes |
+| Media Service | `MEDIA_SERVICE_URL` | Media proxy routes |
+| Notification Service | `NOTIFICATION_SERVICE_URL` | Notification feed and actions |
+| Recommendation Service | `RECOMMENDATION_SERVICE_URL` | Events, recommendations and admin policy proxy |
+| Seller Service | `SELLER_SERVICE_URL` | Seller onboarding, shop and shipping settings |
+| Product Service | `PRODUCT_SERVICE_URL` | Products, reviews and seller product APIs |
+| AI Service | `AI_SERVICE_URL` | Seller content and image-optimization APIs |
+| Cart Service | `CART_SERVICE_URL` | Cart APIs |
+| Order Service | `ORDER_SERVICE_URL` | Customer and seller order APIs |
+| Shipping Service | `SHIPPING_SERVICE_URL` | Shipment, tracking and location APIs |
 
-| Downstream | Biến cấu hình | Default local | Gateway dùng cho |
-| --- | --- | ---: | --- |
-| Keycloak | `KEYCLOAK_URL` | `8080` | JWKS verification |
-| Auth Service | `AUTH_SERVICE_URL` | `3002` | Auth flow, users, admin access và permission lookup |
-| Catalog Service | `CATALOG_SERVICE_URL` | `3003` | Categories/catalog wildcard proxy |
-| Media Service | `MEDIA_SERVICE_URL` | `3004` | Media wildcard proxy |
-| Notification Service | `NOTIFICATION_SERVICE_URL` | `3005` | Notification feed/actions |
-| Recommendation Service | `RECOMMENDATION_SERVICE_URL` | `3006` | Events, recommendations và admin policy proxy |
-| Seller Service | `SELLER_SERVICE_URL` | `3007` | Seller onboarding, shop và shipping settings |
-| Product Service | `PRODUCT_SERVICE_URL` | `3008` | Product, reviews và seller product APIs |
-| AI Service | `AI_SERVICE_URL` | `3009` | Seller product-content và image optimization |
-| Cart Service | `CART_SERVICE_URL` | `3010` trong env mẫu | Cart APIs; cần đối chiếu port service thực tế |
-| Order Service | `ORDER_SERVICE_URL` | `3011` | Customer và seller order APIs |
-| Inventory Service | `INVENTORY_SERVICE_URL` | `3011` trong env mẫu | Biến cấu hình hiện có, chưa thấy module proxy tương ứng |
-| Shipping Service | `SHIPPING_SERVICE_URL` | `3012` | Shipment, tracking và locations |
-| Promotion Service | `PROMOTION_SERVICE_URL` | `3013` trong env mẫu | Biến cấu hình hiện có, chưa thấy module proxy tương ứng |
-| Return Service | `RETURN_SERVICE_URL` | `3014` trong env mẫu | Biến cấu hình hiện có, chưa thấy module proxy tương ứng |
+The Gateway does not perform service discovery. Proxy modules read URLs from `ConfigService`, so an invalid URL appears as an upstream error or `503` response.
 
-Gateway không tự discovery service. Mỗi proxy controller đọc URL từ `ConfigService`, vì vậy sai URL sẽ biểu hiện thành lỗi upstream/503 hoặc route trả lỗi từ service đích.
+### Asynchronous and realtime communication
 
-### 11.2. Async và realtime
+The Gateway does not own the business event bus. Realtime notification delivery uses the Redis channel configured by `NOTIFICATION_REALTIME_CHANNEL`. A subscriber parses each message and emits it to the matching Socket.IO rooms. If realtime Redis subscription is unavailable, the REST notification feed remains an independent fallback.
 
-Gateway không tự sở hữu event bus nghiệp vụ. Notification realtime dùng Redis channel `NOTIFICATION_REALTIME_CHANNEL`; subscriber nhận message, parse payload và phát tới các Socket.IO room phù hợp. Nếu Redis realtime subscription lỗi, REST notification feed vẫn là đường fallback độc lập.
+## 12. Route map
 
-## 12. Route Map
+The route families below are combined with `/api/v1`, except for `/api/health`. They describe the current Gateway controllers, not every private endpoint inside downstream services.
 
-Tất cả route dưới đây được ghép với prefix bên ngoài `/api/v1`, trừ health `/api/health`. Danh sách phản ánh controller hiện tại, không phải danh sách endpoint nội bộ của từng downstream.
-
-### Auth và account
-
-| Method | Route |
+| Domain | Route families |
 | --- | --- |
-| `POST` | `/auth/register/initiate`, `/auth/register/verify`, `/auth/login`, `/auth/refresh` |
-| `POST` | `/auth/forgot-password`, `/auth/reset-password` |
-| `GET/POST` | `/auth/social/start/:provider`, `/auth/social/callback/:provider` |
-| `ALL` | `/users/*`, `/admin/users/*`, `/admin/access-control/*` |
-
-### Catalog, media và shop
-
-| Method | Route |
-| --- | --- |
-| `ALL` | `/categories/*`, `/media/*`, `/notifications/*` |
-| `GET` | `/shops`, `/shops/:identifier` |
-| `PUT/DELETE` | `/shops/:identifier/follow` |
-
-### Product
-
-| Method | Route family |
-| --- | --- |
-| `GET` | `/products`, `/products/:id`, `/products/brands` |
-| `GET` | `/products/seller`, `/products/seller/:productId`, shop summary và external shop summary |
-| `POST/PUT/DELETE` | Seller product create/update/delete/restore/status |
-| `GET/POST/PATCH/PUT/DELETE` | Product reviews, review media cleanup và review likes |
-
-### Cart và order
-
-| Domain | Route family |
-| --- | --- |
+| Auth and account | `/auth/*`, `/users/*`, `/admin/users/*`, `/admin/access-control/*` |
+| Catalog and media | `/categories/*`, `/media/*`, `/notifications/*` |
+| Shops | `/shops`, `/shops/:identifier`, `/shops/:identifier/follow` |
+| Products | `/products`, `/products/:id`, `/products/brands`, seller product routes |
+| Reviews | Product review, review media cleanup and review-like routes |
 | Cart | `/cart`, `/cart/items`, `/cart/items/:itemId` |
-| Customer order | `/orders/quote`, `/orders/shipping-address/*`, `/orders`, `/orders/:orderId`, cancel, returns và delivery confirmation |
-| Seller order | `/seller/orders`, `/seller/orders/:orderId`, returns approve/reject/inspection |
-
-### Seller, shipping và AI
-
-| Domain | Route family |
-| --- | --- |
+| Customer orders | `/orders/quote`, `/orders`, `/orders/:orderId`, cancel, returns and delivery confirmation |
+| Seller orders | `/seller/orders`, `/seller/orders/:orderId`, seller return actions |
 | Seller | `/seller/applications/*`, `/seller/shop/profile/*`, `/seller/shipping/*` |
-| Shipping | `/seller/orders/:orderId/shipment/*`, `/orders/:orderId/tracking`, `/shipping/locations/*` |
-| AI content | `/seller/ai/product-content/name-suggestions`, `/description-suggestions` |
-| AI image | `/seller/ai/image-optimization/overview`, `jobs/*`, apply/reject/rollback |
+| Shipping | Shipment creation, tracking and `/shipping/locations/*` |
+| AI content | `/seller/ai/product-content/*` |
+| AI image optimization | `/seller/ai/image-optimization/*` |
+| Recommendation | `/recommendation/events`, batch events, recommendations and profile merge |
+| Admin recommendation | `/admin/recommendation/overview`, `config`, history, rollback and experiments |
 
-### Recommendation và admin
+For the exact method and permission contract, use Swagger in development and the controller/DTO implementation in this repository.
 
-| Domain | Route family |
-| --- | --- |
-| Recommendation | `/recommendation/events`, `/recommendation/events/batch`, `/recommendation/recommendations`, `/recommendation/profile/merge` |
-| Admin recommendation | `/admin/recommendation/overview`, `users/*`, `config`, `config/history`, `config/rollback/:version`, `experiments` |
+## 13. Realtime notifications
 
-## 13. Realtime Notifications
+### Client connection
 
-### Kết nối client
-
-Client kết nối Socket.IO vào namespace `/notifications` và gửi token trong handshake auth:
+Clients connect to the `/notifications` namespace and send the access token in the Socket.IO handshake:
 
 ```typescript
 const socket = io("http://localhost:3001/notifications", {
@@ -425,226 +390,145 @@ const socket = io("http://localhost:3001/notifications", {
 });
 ```
 
-Token không nên truyền trong query string vì query dễ xuất hiện trong log, proxy trace hoặc history.
+Do not put tokens in a query string because query values can appear in logs, proxy traces or browser history.
 
-### Room và audience
+### Rooms and audiences
 
-Sau khi verify handshake, Gateway có thể đưa socket vào các room theo user, broadcast, role và permission. Notification publisher có thể nhắm đến user, role, permission hoặc shop audience; gateway instance hiện tại chịu trách nhiệm emit cho client đang giữ kết nối với nó.
+After the handshake is verified, the Gateway can place a socket into rooms for a user, role, permission, broadcast or shop audience. Publishers can target those audiences, while the connected Gateway instance emits to the clients it currently owns.
 
-### Failure behavior
-
-- Handshake không có token hợp lệ sẽ bị từ chối.
-- Message Redis malformed sẽ bị bỏ qua, không làm subscriber process crash.
-- Redis realtime subscriber lỗi không làm mất REST notification API.
-- Khi scale nhiều instance, tất cả instance phải dùng chung Redis channel và token/config tương thích.
-
-## 14. Project Structure
+## 14. Project structure
 
 ```text
 src/
-├── app.module.ts                         # Composition root, global modules/guards
-├── main.ts                               # Bootstrap, prefix, versioning, CORS, Swagger
-├── common/
-│   ├── adapters/                          # Socket.IO adapter
-│   ├── config/                            # Helmet configuration
-│   ├── decorators/                        # Public, guest, permission, CSRF metadata
-│   ├── guards/                            # Throttle-adjacent security guards
-│   ├── security/                          # Security module and HTTP security setup
-│   └── services/                          # JWKS verification and HTTP proxy boundary
-├── database/redis/                        # Redis module/configuration
-└── modules/
-    ├── ai/                                # AI product content/image proxy
-    ├── auth/                              # Auth, users and admin access proxy
-    ├── cart/                              # Cart proxy
-    ├── catalog/                           # Category proxy
-    ├── health/                            # Health endpoint
-    ├── media/                             # Media wildcard proxy
-    ├── notification/                      # Notification REST proxy
-    ├── order/                             # Customer and seller order proxy
-    ├── product/                           # Product/review proxy
-    ├── realtime-notifications/            # Socket.IO gateway and Redis subscriber
-    ├── recommendation/                    # Recommendation/admin proxy
-    ├── seller/                            # Seller/shop proxy
-    ├── shipping/                          # Shipment and location proxy
-    └── shop/                              # Public shop/follow proxy
+├── main.ts                         # Bootstrap, global prefix, versioning and Swagger
+├── app.module.ts                   # Root module and dependency composition
+├── common/                         # Shared decorators, guards, filters and constants
+├── config/                         # Environment parsing and configuration factories
+├── health/                         # Health controller and health checks
+├── modules/                        # Gateway features grouped by responsibility
+│   ├── auth/                        # JWT, JWKS and authentication context
+│   ├── permissions/                # Permission metadata and permission guard
+│   ├── proxy/                      # HTTP forwarding and downstream adapters
+│   ├── notifications/              # Socket.IO and Redis realtime delivery
+│   └── ...                          # Domain-specific proxy modules
+└── infrastructure/                # Redis, Axios and external integration setup
 ```
 
-### File ownership
+The exact folder names may grow with the route surface, but the ownership rule stays stable: guards protect the edge, proxy adapters forward contracts, and domain services own business rules.
 
-| File/area | Responsibility |
+## 15. Configuration reference
+
+| Variable | Purpose |
 | --- | --- |
-| `src/main.ts` | Cross-cutting HTTP runtime setup |
-| `src/app.module.ts` | Module composition và global guard registration |
-| `common/services/jwks.service.ts` | Keycloak key discovery và JWT verification |
-| `common/services/proxy.service.ts` | Header allow-list, forward và upstream error mapping |
-| `common/guards/*` | Request admission, identity và permission checks |
-| `modules/*/*-proxy.controller.ts` | Route-to-service mapping, không chứa domain transaction |
-| `modules/realtime-notifications/*` | Socket handshake, Redis subscription và emit |
-
-## 15. Configuration Reference
-
-### Runtime và browser boundary
-
-| Variable | Ý nghĩa | Mặc định mẫu |
-| --- | --- | --- |
-| `NODE_ENV` | Runtime mode, ảnh hưởng Swagger | `development` |
-| `PORT` | HTTP listen port | `3001` |
-| `ALLOWED_ORIGINS` | Comma-separated CORS allow-list | `http://localhost:5173,http://localhost:3001` |
-
-### Identity và security
-
-| Variable | Ý nghĩa |
-| --- | --- |
+| `PORT` | HTTP listen port |
+| `NODE_ENV` | Runtime environment and Swagger exposure |
+| `API_PREFIX` | External API prefix, normally `/api` |
 | `KEYCLOAK_URL` | Keycloak base URL |
-| `KEYCLOAK_REALM` | Realm phát hành access token |
-| `INTERNAL_SERVICE_TOKEN` | Secret cho các internal downstream contract khi controller yêu cầu |
+| `KEYCLOAK_REALM` | Keycloak realm |
+| `KEYCLOAK_CLIENT_ID` | OIDC client context when required |
+| `REDIS_HOST` / `REDIS_PORT` | Redis connection |
+| `ALLOWED_ORIGINS` | CORS allow-list |
+| `AUTH_SERVICE_URL` | Auth Service base URL |
+| `PRODUCT_SERVICE_URL` | Product Service base URL |
+| `CATALOG_SERVICE_URL` | Catalog Service base URL |
+| `CART_SERVICE_URL` | Cart Service base URL |
+| `ORDER_SERVICE_URL` | Order Service base URL |
+| `SHIPPING_SERVICE_URL` | Shipping Service base URL |
+| `SELLER_SERVICE_URL` | Seller Service base URL |
+| `MEDIA_SERVICE_URL` | Media Service base URL |
+| `NOTIFICATION_SERVICE_URL` | Notification Service base URL |
+| `RECOMMENDATION_SERVICE_URL` | Recommendation Service base URL |
+| `AI_SERVICE_URL` | AI Service base URL |
+| `NOTIFICATION_REALTIME_CHANNEL` | Redis pub/sub channel for notifications |
 
-### Redis
-
-| Variable | Ý nghĩa | Mặc định mẫu |
-| --- | --- | --- |
-| `REDIS_HOST` | Redis hostname | `localhost` |
-| `REDIS_PORT` | Redis port | `6379` |
-| `REDIS_PASSWORD` | Redis password, có thể để trống local | — |
-| `REDIS_DB` | Redis logical database | `0` |
-
-### Downstream URLs
-
-Các biến `*_SERVICE_URL` trong `.env.example` là runtime wiring, không phải service discovery. Khi đổi port hoặc deploy container, cập nhật URL theo network/container name của môi trường đó; không cần sửa controller.
-
-Không commit access token, private key, internal token thật hoặc secret của Redis vào `.env.example` hay README.
+Use `.env.example` as the source of truth for names and defaults. Never commit access tokens, private keys, internal service tokens or production provider credentials.
 
 ## 16. Development
 
-### Scripts
-
-| Command | Mục đích |
-| --- | --- |
-| `npm run dev` | Nest watch mode |
-| `npm run build` | Compile production bundle |
-| `npm run start` | Chạy bundle đã build |
-| `npm run lint` | ESLint cho `src` |
-| `npm run type-check` | TypeScript check không emit |
-| `npm test` | Jest unit/controller tests |
-
-### Quality gate cục bộ
-
 ```powershell
-npm run type-check
 npm run lint
-npm test -- --runInBand
+npm run type-check
+npm test
 npm run build
 ```
 
-Nên chạy theo thứ tự trên khi thay đổi guard, proxy service hoặc controller. Khi test proxy, mock Axios/ConfigService và kiểm tra cả request headers lẫn status/data trả về; không nên biến test unit thành phụ thuộc bắt buộc vào cả cụm microservice.
+When changing a proxy route, verify all of the following:
 
-### Thêm một proxy module
+1. The route has the expected version and prefix.
+2. The correct downstream URL is used.
+3. Public, guest and authenticated access are explicitly distinguished.
+4. Permission metadata matches the Auth Service contract.
+5. Spoofable client headers are overwritten or removed.
+6. Upstream status codes and error bodies remain meaningful.
+7. Binary content types are preserved where required.
+8. Tests cover both successful forwarding and downstream failure.
 
-1. Xác định service nào sở hữu contract và biến URL tương ứng.
-2. Tạo controller mỏng trong module domain.
-3. Dùng `ProxyService` để forward body/query/selected headers.
-4. Gắn decorator `@Public`, `@AllowGuest`, `@RequirePermissions` hoặc `@SkipCsrf` đúng contract.
-5. Đăng ký module trong `AppModule`.
-6. Thêm test cho route, config key và failure response.
-7. Cập nhật route map, boundary và config reference trong README.
+## 17. Engineering decisions
 
-Không thêm business repository hoặc gọi database domain từ Gateway chỉ để phục vụ một route mới.
+### Why keep the Gateway thin?
 
-## 17. Engineering Decisions
+The Gateway is a policy and transport boundary, not a second domain service. Thin proxy modules reduce duplication and ensure that product, order, seller and recommendation invariants remain in their owners.
 
-### 17.1. Gateway kiểm tra token, Auth Service cung cấp permission
+### Why verify JWT at the edge and downstream?
 
-Keycloak là nguồn xác thực cryptographic; Auth Service là nơi hiểu profile, role mapping và permission động. Tách hai trách nhiệm giúp Gateway không phải giữ policy authorization trùng lặp và giúp thay đổi permission có hiệu lực mà không cần phát hành lại Gateway.
+Edge verification provides fast rejection and consistent context propagation. Downstream verification and authorization remain necessary because an internal caller must not be able to bypass the domain service boundary.
 
-### 17.2. Forward upstream status
+### Why resolve permissions dynamically?
 
-Proxy giữ nguyên response status/data/header để client nhận đúng contract của domain service. Gateway chỉ chuyển network failure thành `503`; nó không che lỗi `400`, `401`, `403`, `404` hoặc `5xx` do downstream trả về.
+Roles and permissions can change without waiting for a stale browser token or hard-coded Gateway mapping to expire. Auth Service provides the latest application-level authorization context.
 
-### 17.3. Header allow-list
+### Why use Redis for throttling and realtime?
 
-Forward có chọn lọc giảm nguy cơ chuyển tiếp header không cần thiết. Identity header được Gateway áp sau client header để tránh spoofing. `x-request-id`, `idempotency-key` và `x-session-id` được giữ khi có để hỗ trợ trace và request semantics.
+Redis provides shared counters and pub/sub behavior across Gateway instances. This prevents each instance from applying an isolated rate limit or missing notifications published by another instance.
 
-### 17.4. Redis-backed throttling
+## 18. Operational notes
 
-Throttle dùng Redis thay vì memory local để các instance chia sẻ counter. Đây là lựa chọn phù hợp khi Gateway scale ngang, nhưng Redis trở thành dependency cần monitor.
+- A `401` usually indicates a missing, expired or invalid token.
+- A `403` usually indicates a valid identity without the required permission.
+- A `429` indicates throttling; inspect Redis connectivity and the configured limits.
+- A `503` commonly indicates that the Gateway cannot reach the configured downstream service.
+- A valid downstream `4xx/5xx` should remain visible rather than being mistaken for a Gateway success.
+- Missing JWKS connectivity can prevent authenticated traffic while public routes may still respond.
+- Missing Redis affects throttling or realtime behavior depending on the failing integration.
 
-### 17.5. Socket.IO handshake auth
+Log correlation IDs, route, upstream service, status and latency. Never log bearer tokens, passwords, private keys or internal service tokens.
 
-Token nằm trong `handshake.auth` thay vì query string. Gateway verify cùng boundary JWT và chỉ emit notification sau khi socket đã có identity hợp lệ.
+## 19. Documentation findings
 
-## 18. Operational Notes
+The following documents provide context around this service:
 
-### Observability tối thiểu
-
-Khi điều tra một request, đối chiếu:
-
-- Gateway access/error log.
-- `x-request-id` nếu client/upstream đã cung cấp.
-- HTTP status và latency của downstream.
-- Keycloak JWKS availability khi verify token.
-- Redis health khi throttle hoặc realtime bất thường.
-
-Gateway hiện không phải source of truth cho business audit. Audit nghiệp vụ phải được ghi ở service sở hữu mutation.
-
-### Failure matrix
-
-| Sự cố | Hành vi mong đợi |
+| Topic | Location |
 | --- | --- |
-| JWT không hợp lệ | Gateway từ chối trước khi forward |
-| Thiếu permission | `403 Forbidden` từ permission guard |
-| Origin không được allow | Browser bị CORS policy chặn |
-| Mutation thiếu CSRF marker | Gateway từ chối request |
-| Upstream không kết nối được | `503 Service Unavailable` |
-| Upstream trả lỗi business | Giữ status/data lỗi của upstream |
-| Redis throttle lỗi | Cần kiểm tra startup/runtime health vì throttler phụ thuộc Redis |
-| Redis realtime subscriber lỗi | REST notification vẫn độc lập; realtime instance đó không nhận pub/sub |
+| Gateway authentication and proxy behavior | `docs/features/api-gateway/` |
+| Gateway health checks | `docs/features/api-gateway/health.md` |
+| JWT/RBAC architecture | `docs/features/auth/AUTH-RBAC-ARCHITECTURE_V2.md` |
+| Keycloak setup | `docs/architecture/KEYCLOAK_SETUP.md` |
+| Kafka integration | `docs/architecture/KAFKA_GUIDE.md` |
+| Repository system overview | `docs/architecture/CODEBASE_OVERVIEW.md` |
 
-### Deploy checklist
-
-- Cập nhật toàn bộ `*_SERVICE_URL` theo network production.
-- Đảm bảo `KEYCLOAK_URL` và realm khớp issuer trong token.
-- Cấu hình `ALLOWED_ORIGINS` là origin thật, không dùng wildcard với credentials.
-- Đặt secret internal/Redis qua secret manager.
-- Kiểm tra `/api/health` và route đại diện sau deploy.
-- Kiểm tra `/docs` không bị expose ngoài development.
-- Xác nhận các instance dùng chung Redis khi scale Gateway.
-
-## 19. Documentation Findings
-
-Các điểm dưới đây được ghi nhận từ source/config hiện tại để tránh đọc README như một cam kết rằng mọi wiring đã đồng nhất:
-
-1. `main.ts` và `.env.example` của Gateway dùng port mặc định `3001`, trong khi `infra/nginx/conf.d/default.conf` hiện trỏ upstream `api-gateway:3000`. Cần thống nhất khi deploy qua Nginx.
-2. `.env.example` đang để `CART_SERVICE_URL=http://localhost:3010`, trong khi Cart Service hiện có cấu hình local mặc định khác. Cần đối chiếu compose/runtime wiring trước khi test cart qua Gateway.
-3. `INVENTORY_SERVICE_URL`, `PROMOTION_SERVICE_URL` và `RETURN_SERVICE_URL` tồn tại trong env mẫu nhưng source Gateway hiện chưa đăng ký proxy module tương ứng.
-4. Bảng route ở README mô tả controller đang có; wildcard `ALL` không có nghĩa Gateway tự sinh business endpoint mà chỉ forward path được downstream hỗ trợ.
-
-Đây là ghi chú tài liệu, không tự ý sửa config hạ tầng trong phạm vi README.
+When implementation and documentation disagree, verify the active module, `.env.example` and tests before updating this README.
 
 ## 20. FAQ
 
-### Vì sao frontend không gọi thẳng microservice?
+### Does the browser call services directly?
 
-Để frontend chỉ phụ thuộc một edge contract, không lộ topology nội bộ và không phải tự lặp lại JWT, permission, CORS, CSRF và identity propagation.
+No. The browser calls the Gateway, which forwards the request to the owning service.
 
-### Gateway có lưu user hoặc order không?
+### Is the Gateway the source of authorization truth?
 
-Không. Gateway chỉ giữ state kỹ thuật ngắn hạn ở Redis cho throttling/realtime. User, order và các dữ liệu nghiệp vụ nằm ở service sở hữu chúng.
+No. It enforces the edge boundary, while Keycloak and Auth Service provide identity and application permission context. Downstream services must enforce their own business authorization as well.
 
-### Vì sao token hợp lệ nhưng vẫn nhận 403?
+### Can the Gateway run without every service?
 
-JWT chứng minh danh tính chưa đồng nghĩa user có permission của route. Gateway lấy permission động qua Auth Service rồi `PermissionsGuard` mới quyết định cho forward.
+Yes, for bootstrap and health checks. A specific proxy route requires its downstream service and any dependencies needed by that service.
 
-### Khi downstream trả 404 thì Gateway có đổi thành 503 không?
+### Why did a downstream error become `503`?
 
-Không. `ProxyService` giữ nguyên HTTP response của upstream. `503` dành cho lỗi không kết nối được hoặc lỗi transport tại proxy boundary.
+A `503` normally means the Gateway could not establish or complete the network call. If the downstream returned a business status, the Gateway should preserve that upstream status.
 
-### Có thể tắt JWT cho một route không?
+### Can Swagger be used in production?
 
-Chỉ route được code đánh dấu `@Public()` hoặc `@AllowGuest()` mới bypass tương ứng. Không nên tắt global guard để sửa lỗi một endpoint; hãy kiểm tra metadata và security contract của route đó.
-
-### Có thể dùng Gateway để gọi AI Service trực tiếp từ browser không?
-
-Browser chỉ gọi route được expose qua Gateway. Internal token hoặc URL nội bộ không được đưa vào frontend; quyền truy cập vẫn phải đi qua JWT, permission và proxy contract.
+No. Swagger is registered only outside the production environment.
 
 ## 21. Ownership
 
@@ -652,14 +536,6 @@ Browser chỉ gọi route được expose qua Gateway. Internal token hoặc URL
 
 **Đào Ngọc Anh**
 
-**Software Engineer**
+Software Engineer responsible for the API Gateway architecture, security pipeline, service proxy boundaries, request context propagation, realtime notification edge and maintenance of this service.
 
 [View portfolio](https://daongocanh.site)
-
-Software Engineer responsible for the architecture, implementation, integration, and maintenance of this service.
-
-### Architecture & API Design
-
-**Đào Ngọc Anh**
-
-Designed the gateway boundary, security pipeline, proxy contracts, identity propagation, realtime notification edge, and integration with the Bin Ecommerce ecosystem.
