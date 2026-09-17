@@ -1,0 +1,34 @@
+# File này chỉ áp dụng cho services/api-gateway/Dockerfile khi build từ repository root.
+# Mục tiêu là giảm build context nhưng vẫn giữ source chung mà Gateway thực sự cần.
+
+.git
+.gitignore
+.env
+.env.*
+**/.env
+**/.env.*
+
+**/node_modules
+**/dist
+**/coverage
+**/.turbo
+**/.cache
+**/*.log
+**/*.tsbuildinfo
+
+# Không gửi source/test của service khác vào context của API Gateway.
+services/*/src
+!services/api-gateway/src
+!services/api-gateway/src/**
+services/*/test
+services/*/tests
+services/*/README.md
+
+# Gateway không cần tài liệu, script local hoặc artifact build trong context.
+**/README.md
+**/scripts
+services/api-gateway/artifacts
+
+# Chỉ giữ package dùng để resolve alias @common trong lúc compile.
+packages/*/node_modules
+packages/*/dist
