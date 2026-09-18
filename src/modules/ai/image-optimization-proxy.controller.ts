@@ -18,14 +18,48 @@ export class ImageOptimizationProxyController {
     config: ConfigService,
     private readonly proxyService: ProxyService,
   ) {
-    this.targetBase = config.get<string>("AI_SERVICE_URL", "http://ai-service:3009");
+    this.targetBase = config.get<string>(
+      "AI_SERVICE_URL",
+      "http://ai-service:3009",
+    );
   }
 
   // Forward overview sau khi gateway xác minh seller có quyền xem dashboard.
   @Get("overview")
   @RequirePermissions(Permission.SELLER_AI_IMAGE_OPTIMIZATION_VIEW)
   async overview(@Req() req: Request, @Res() res: Response): Promise<void> {
-    const response = await this.proxyService.forward(`${this.targetBase}/api/v1/seller/ai/image-optimization/overview`, req);
+    const response = await this.proxyService.forward(
+      `${this.targetBase}/api/v1/seller/ai/image-optimization/overview`,
+      req,
+    );
+    res.status(response.status).json(response.data);
+  }
+
+  // Forward KPI so sánh trước/sau; AI Service vẫn giữ ownership và tính business metric.
+  @Get("impact/overview")
+  @RequirePermissions(Permission.SELLER_AI_IMAGE_OPTIMIZATION_VIEW)
+  async impactOverview(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    const response = await this.proxyService.forward(
+      `${this.targetBase}/api/v1/seller/ai/image-optimization/impact/overview`,
+      req,
+    );
+    res.status(response.status).json(response.data);
+  }
+
+  // Forward impact theo danh sách product mà Seller Center đang hiển thị.
+  @Get("impact/products")
+  @RequirePermissions(Permission.SELLER_AI_IMAGE_OPTIMIZATION_VIEW)
+  async impactProducts(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    const response = await this.proxyService.forward(
+      `${this.targetBase}/api/v1/seller/ai/image-optimization/impact/products`,
+      req,
+    );
     res.status(response.status).json(response.data);
   }
 
@@ -39,39 +73,70 @@ export class ImageOptimizationProxyController {
   ): Promise<void> {
     // Buộc NestJS chạy DTO validation trước khi forward; payload vẫn nằm trong req.body để ProxyService giữ nguyên contract.
     void payload;
-    const response = await this.proxyService.forward(`${this.targetBase}/api/v1/seller/ai/image-optimization/jobs`, req);
+    const response = await this.proxyService.forward(
+      `${this.targetBase}/api/v1/seller/ai/image-optimization/jobs`,
+      req,
+    );
     res.status(response.status).json(response.data);
   }
 
   // Lấy trạng thái job theo ID mà không chèn business rule vào gateway.
   @Get("jobs/:jobId")
   @RequirePermissions(Permission.SELLER_AI_IMAGE_OPTIMIZATION_VIEW)
-  async getJob(@Param("jobId") jobId: string, @Req() req: Request, @Res() res: Response): Promise<void> {
-    const response = await this.proxyService.forward(`${this.targetBase}/api/v1/seller/ai/image-optimization/jobs/${jobId}`, req);
+  async getJob(
+    @Param("jobId") jobId: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    const response = await this.proxyService.forward(
+      `${this.targetBase}/api/v1/seller/ai/image-optimization/jobs/${jobId}`,
+      req,
+    );
     res.status(response.status).json(response.data);
   }
 
   // Forward yêu cầu apply sau khi seller duyệt preview.
   @Post("jobs/:jobId/apply")
   @RequirePermissions(Permission.SELLER_AI_IMAGE_OPTIMIZATION_APPLY)
-  async applyJob(@Param("jobId") jobId: string, @Req() req: Request, @Res() res: Response): Promise<void> {
-    const response = await this.proxyService.forward(`${this.targetBase}/api/v1/seller/ai/image-optimization/jobs/${jobId}/apply`, req);
+  async applyJob(
+    @Param("jobId") jobId: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    const response = await this.proxyService.forward(
+      `${this.targetBase}/api/v1/seller/ai/image-optimization/jobs/${jobId}/apply`,
+      req,
+    );
     res.status(response.status).json(response.data);
   }
 
   // Forward từ chối output để AI Service lên lịch cleanup asset AI.
   @Post("jobs/:jobId/reject")
   @RequirePermissions(Permission.SELLER_AI_IMAGE_OPTIMIZATION_APPLY)
-  async rejectJob(@Param("jobId") jobId: string, @Req() req: Request, @Res() res: Response): Promise<void> {
-    const response = await this.proxyService.forward(`${this.targetBase}/api/v1/seller/ai/image-optimization/jobs/${jobId}/reject`, req);
+  async rejectJob(
+    @Param("jobId") jobId: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    const response = await this.proxyService.forward(
+      `${this.targetBase}/api/v1/seller/ai/image-optimization/jobs/${jobId}/reject`,
+      req,
+    );
     res.status(response.status).json(response.data);
   }
 
   // Forward rollback và để Product Service phục hồi snapshot ảnh gốc trong transaction.
   @Post("jobs/:jobId/rollback")
   @RequirePermissions(Permission.SELLER_AI_IMAGE_OPTIMIZATION_ROLLBACK)
-  async rollbackJob(@Param("jobId") jobId: string, @Req() req: Request, @Res() res: Response): Promise<void> {
-    const response = await this.proxyService.forward(`${this.targetBase}/api/v1/seller/ai/image-optimization/jobs/${jobId}/rollback`, req);
+  async rollbackJob(
+    @Param("jobId") jobId: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    const response = await this.proxyService.forward(
+      `${this.targetBase}/api/v1/seller/ai/image-optimization/jobs/${jobId}/rollback`,
+      req,
+    );
     res.status(response.status).json(response.data);
   }
 }

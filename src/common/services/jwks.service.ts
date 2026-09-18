@@ -49,6 +49,7 @@ export class JwksService implements OnModuleInit {
   private readonly logger = new Logger(JwksService.name);
   private client!: JwksClient;
   private readonly expectedIssuer: string;
+  private readonly jwksUri: string;
   private readonly authServiceUrl: string;
 
   // Khởi tạo issuer Keycloak và URL auth-service để Gateway xác thực token rồi lấy permission động từ backend.
@@ -56,12 +57,17 @@ export class JwksService implements OnModuleInit {
     private readonly config: ConfigService,
     private readonly httpService: HttpService,
   ) {
-    const keycloakUrl = config.get<string>(
+    const keycloakInternalUrl = config.get<string>(
       "KEYCLOAK_URL",
-      "http://localhost:8080",
+      "http://keycloak:8080",
+    );
+    const keycloakPublicUrl = config.get<string>(
+      "KEYCLOAK_PUBLIC_URL",
+      keycloakInternalUrl,
     );
     const realm = config.get<string>("KEYCLOAK_REALM", "bin-ecommerce");
-    this.expectedIssuer = `${keycloakUrl}/realms/${realm}`;
+    this.expectedIssuer = `${keycloakPublicUrl}/realms/${realm}`;
+    this.jwksUri = `${keycloakInternalUrl}/realms/${realm}/protocol/openid-connect/certs`;
     this.authServiceUrl = config.get<string>(
       "AUTH_SERVICE_URL",
       "http://auth-service:3002",
@@ -71,13 +77,16 @@ export class JwksService implements OnModuleInit {
   // Tạo JWKS client một lần khi module boot để cache public keys xác thực JWT.
   onModuleInit(): void {
     this.client = jwksClient({
-      jwksUri: `${this.expectedIssuer}/protocol/openid-connect/certs`,
+      // Gateway lấy JWKS qua Docker hostname, nhưng kiểm tra claim iss theo public URL mà token đã phát hành.
+      jwksUri: this.jwksUri,
       cache: true,
       cacheMaxAge: 3600000,
       rateLimit: true,
       jwksRequestsPerMinute: 10,
     });
-    this.logger.log(`JWKS configured for issuer: ${this.expectedIssuer}`);
+    this.logger.log(
+      `JWKS configured for issuer: ${this.expectedIssuer}; keys: ${this.jwksUri}`,
+    );
   }
 
   // Xác thực chữ ký JWT bằng public key Keycloak, sau đó lấy permissions động từ Auth Service.
@@ -106,7 +115,8 @@ export class JwksService implements OnModuleInit {
         payload.preferred_username ??
         payload.email?.split("@")[0] ??
         "",
-      avatarUrl: viewer.avatarUrl ?? payload.picture ?? payload.avatar_url ?? null,
+      avatarUrl:
+        viewer.avatarUrl ?? payload.picture ?? payload.avatar_url ?? null,
       roles,
       permissions: viewer.permissions ?? [],
       iss: payload.iss ?? "",
