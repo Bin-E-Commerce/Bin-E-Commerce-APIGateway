@@ -12,14 +12,21 @@ export const REDIS_CLIENT = "REDIS_CLIENT";
       provide: REDIS_CLIENT,
       inject: [ConfigService],
       useFactory: (config: ConfigService): Redis => {
-        return new Redis({
-          host: config.get<string>("REDIS_HOST", "localhost"),
-          port: Number(config.get<string>("REDIS_PORT", "6379")),
-          password: config.get<string>("REDIS_PASSWORD") || undefined,
+        // Dùng URL managed Redis khi có; local vẫn giữ cơ chế host/port cũ.
+        const redisUrl = config.get<string>("REDIS_URL")?.trim();
+        const options = {
           db: Number(config.get<string>("REDIS_DB", "0")),
           lazyConnect: true,
           maxRetriesPerRequest: 3,
-        });
+        };
+        return redisUrl
+          ? new Redis(redisUrl, options)
+          : new Redis({
+              host: config.get<string>("REDIS_HOST", "localhost"),
+              port: Number(config.get<string>("REDIS_PORT", "6379")),
+              password: config.get<string>("REDIS_PASSWORD") || undefined,
+              ...options,
+            });
       },
     },
   ],
