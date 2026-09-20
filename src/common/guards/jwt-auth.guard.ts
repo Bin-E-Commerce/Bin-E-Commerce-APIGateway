@@ -50,8 +50,9 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const payload = await this.jwksService.verifyToken(token);
 
-      // Inject user context vào header để proxy và service downstream dùng chung một nguồn phân quyền.
-      request.headers["x-user-id"] = payload.sub;
+      // Forward ID nội bộ của Auth DB; các service nghiệp vụ dùng ID này để kiểm tra ownership shop/product/cart/order.
+      // Keycloak subject chỉ phục vụ xác thực và tra viewer, không được dùng làm khóa nghiệp vụ downstream.
+      request.headers["x-user-id"] = payload.userId;
       request.headers["x-user-email"] = payload.email;
       request.headers["x-user-name"] = payload.name;
       request.headers["x-user-avatar-url"] = payload.avatarUrl ?? "";

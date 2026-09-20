@@ -26,6 +26,8 @@ interface KeycloakAccessTokenPayload extends jwt.JwtPayload {
 
 interface AuthViewerResponse {
   data?: {
+    // Auth Service trả ID nội bộ để các bounded context dùng chung ownership contract với các bảng nghiệp vụ.
+    id?: string;
     permissions?: Permission[];
     name?: string;
     avatarUrl?: string | null;
@@ -33,7 +35,10 @@ interface AuthViewerResponse {
 }
 
 export interface JwtPayload {
+  // `sub` vẫn là Keycloak subject dùng để xác thực và gọi Auth Service /me.
   sub: string;
+  // `userId` là ID nội bộ của Auth DB, được dùng khi Gateway forward request xuống service nghiệp vụ.
+  userId: string;
   email: string;
   name: string;
   avatarUrl: string | null;
@@ -103,11 +108,15 @@ export class JwksService implements OnModuleInit {
       issuer: this.expectedIssuer,
     }) as KeycloakAccessTokenPayload;
     const roles = this.extractRoles(payload);
-    const userId = payload.sub ?? "";
-    const viewer = await this.resolveDynamicViewer(userId, roles);
+    const keycloakUserId = payload.sub ?? "";
+    const viewer = await this.resolveDynamicViewer(keycloakUserId, roles);
+    // Không dùng Keycloak subject cho ownership nghiệp vụ: Product, Seller, Cart và Order lưu Auth DB user ID.
+    // Nếu viewer thiếu ID nội bộ thì fail closed thay vì chuyển nhầm một ID hợp lệ nhưng thuộc namespace khác.
+    if (!viewer.id) throw new Error("Auth viewer is missing internal user ID");
 
     return {
-      sub: userId,
+      sub: keycloakUserId,
+      userId: viewer.id,
       email: payload.email ?? "",
       name:
         viewer.name ??

@@ -1,8 +1,4 @@
-import {
-  Logger,
-  OnModuleDestroy,
-  OnModuleInit,
-} from "@nestjs/common";
+import { Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -64,14 +60,15 @@ export class NotificationGateway
       const payload = await this.jwksService.verifyToken(token);
 
       client.data = {
-        userId: payload.sub,
+        // Notification audience dùng cùng Auth DB user ID với các service nghiệp vụ, không dùng Keycloak subject.
+        userId: payload.userId,
         email: payload.email,
         roles: payload.roles,
         permissions: payload.permissions,
       };
 
       const rooms = new Set<string>([
-        this.userRoom(payload.sub),
+        this.userRoom(payload.userId),
         "broadcast",
         ...payload.roles.map((role) => this.roleRoom(role)),
         ...payload.permissions.map((permission) =>
@@ -81,7 +78,7 @@ export class NotificationGateway
       await client.join([...rooms]);
 
       this.logger.debug(
-        `Notification socket connected for user ${payload.sub}`,
+        `Notification socket connected for user ${payload.userId}`,
       );
     } catch (error) {
       this.logger.warn(
@@ -113,7 +110,9 @@ export class NotificationGateway
       return;
     }
 
-    this.namespace.to([...new Set(rooms)]).emit(message.name, message.notification);
+    this.namespace
+      .to([...new Set(rooms)])
+      .emit(message.name, message.notification);
   }
 
   // Chuyển audience backend thành tên room nội bộ; shop room đã được giữ sẵn cho lúc access profile có shop membership.
