@@ -40,6 +40,9 @@ RUN npm prune --omit=dev
 # Tách stage giúp image cuối nhỏ hơn và giảm bề mặt tấn công khi deploy.
 FROM node:20-alpine AS production
 
+# Update Alpine packages so the runtime receives current security fixes.
+RUN apk upgrade --no-cache
+
 # Ép runtime production kể cả khi người chạy image không truyền NODE_ENV.
 ENV NODE_ENV=production
 
