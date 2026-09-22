@@ -1,3 +1,6 @@
+// File này khởi động API Gateway, cấu hình HTTP platform và gắn observability dùng chung.
+// File không chứa business rule; controller/module chịu trách nhiệm cho từng bounded context.
+
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe, VersioningType } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -6,7 +9,9 @@ import helmet from "helmet";
 import { AppModule } from "./app.module";
 import { buildHelmetOptions } from "./common/config/helmet.config";
 import { ConfiguredSocketIoAdapter } from "./common/adapters/configured-socket-io.adapter";
+import { setupHttpObservability } from "../../../packages/common/observability/http-observability";
 
+// Khởi động gateway và đăng ký middleware cross-cutting trước khi nhận traffic.
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
     logger: ["error", "warn", "log"],
@@ -30,6 +35,8 @@ async function bootstrap(): Promise<void> {
   app.use(helmet(buildHelmetOptions(isDev)));
 
   app.setGlobalPrefix("api");
+  // Đăng ký metrics RED và request ID trước khi service bắt đầu nhận traffic.
+  setupHttpObservability(app, "api-gateway");
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" });
 
   // Dùng để tự động validate các DTO dựa trên class-validator decorators
@@ -55,9 +62,7 @@ async function bootstrap(): Promise<void> {
   });
 
   // WebSocket dùng chung CORS allow-list với HTTP và được khởi tạo sau khi ConfigService đã resolve môi trường.
-  app.useWebSocketAdapter(
-    new ConfiguredSocketIoAdapter(app, allowedOrigins),
-  );
+  app.useWebSocketAdapter(new ConfiguredSocketIoAdapter(app, allowedOrigins));
 
   // Chỉ bật Swagger trong môi trường phát triển để tránh lộ thông tin API trong production
   if (isDev) {
