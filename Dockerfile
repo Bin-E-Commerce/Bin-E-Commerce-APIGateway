@@ -20,7 +20,9 @@ COPY packages/common ./packages/common
 # lại tự chọn version khác. --workspace giới hạn dependency nghiệp vụ cho Gateway;
 # --include=dev giữ Nest CLI/TypeScript để compile, còn --ignore-scripts ngăn
 # lifecycle script không cần thiết chạy trong lúc tạo image.
-RUN npm ci --workspace=services/api-gateway --include=dev --ignore-scripts
+ENV NODE_ENV=development
+RUN npm ci --workspace=services/api-gateway --include=dev --bin-links=true --ignore-scripts \
+  && test -x node_modules/.bin/nest
 
 # Đưa source vào sau dependency để tối ưu Docker layer cache. Dockerfile không dùng
 # COPY . ., vì như vậy sẽ gửi/build nhầm source của các service khác.
