@@ -2,7 +2,7 @@ import { All, Controller, ForbiddenException, Req, Res } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Permission } from "@common/auth";
 import type { Request, Response } from "express";
-import { ProxyService } from "../../common/services/proxy.service";
+import { ProxyService } from "../../../../common/services/proxy.service";
 
 const READ_ONLY_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 

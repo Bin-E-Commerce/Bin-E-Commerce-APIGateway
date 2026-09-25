@@ -4,8 +4,8 @@ import { Controller, Get, Patch, Post, Req, Res } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Permission } from "@common/auth";
 import type { Request, Response } from "express";
-import { RequirePermissions } from "../../common/decorators/permissions.decorator";
-import { ProxyService } from "../../common/services/proxy.service";
+import { RequirePermissions } from "../../../../common/decorators/permissions.decorator";
+import { ProxyService } from "../../../../common/services/proxy.service";
 
 @Controller("admin/recommendation")
 // Gateway bảo vệ các thao tác quản trị recommendation và chuyển tiếp chúng đến Recommendation Service.

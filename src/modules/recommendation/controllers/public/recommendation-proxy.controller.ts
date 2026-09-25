@@ -3,9 +3,9 @@
 import { Controller, Get, Post, Req, Res } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Request, Response } from "express";
-import { AllowGuest } from "../../common/decorators/allow-guest.decorator";
-import { SkipCsrf } from "../../common/decorators/skip-csrf.decorator";
-import { ProxyService } from "../../common/services/proxy.service";
+import { AllowGuest } from "../../../../common/decorators/allow-guest.decorator";
+import { SkipCsrf } from "../../../../common/decorators/skip-csrf.decorator";
+import { ProxyService } from "../../../../common/services/proxy.service";
 
 @Controller("recommendation")
 export class RecommendationProxyController {

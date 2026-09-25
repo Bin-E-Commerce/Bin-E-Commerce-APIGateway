@@ -5,8 +5,8 @@ import { Controller, Get, Param, Post, Req, Res } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Request, Response } from "express";
 import { Permission } from "@common/auth";
-import { RequirePermissions } from "../../common/decorators/permissions.decorator";
-import { ProxyService } from "../../common/services/proxy.service";
+import { RequirePermissions } from "../../../../common/decorators/permissions.decorator";
+import { ProxyService } from "../../../../common/services/proxy.service";
 
 // Định tuyến các API order mà không để client biết địa chỉ service nội bộ.
 @Controller("orders")

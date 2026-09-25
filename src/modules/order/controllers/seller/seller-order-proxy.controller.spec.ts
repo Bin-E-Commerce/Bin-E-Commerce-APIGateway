@@ -2,7 +2,7 @@
 
 import type { ConfigService } from "@nestjs/config";
 import type { Request, Response } from "express";
-import type { ProxyService } from "../../common/services/proxy.service";
+import type { ProxyService } from "../../../../common/services/proxy.service";
 import { SellerOrderProxyController } from "./seller-order-proxy.controller";
 
 describe("SellerOrderProxyController", () => {

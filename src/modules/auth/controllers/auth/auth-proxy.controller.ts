@@ -2,8 +2,8 @@ import { All, Controller, Get, Post, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { ConfigService } from "@nestjs/config";
 import { Throttle } from "@nestjs/throttler";
-import { Public } from "../../common/decorators/public.decorator";
-import { ProxyService } from "../../common/services/proxy.service";
+import { Public } from "../../../../common/decorators/public.decorator";
+import { ProxyService } from "../../../../common/services/proxy.service";
 
 // ─── Rate-limit constants (TTL in ms) ────────────────────────────────────────
 const T = {

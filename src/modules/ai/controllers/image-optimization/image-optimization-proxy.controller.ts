@@ -4,10 +4,10 @@
 import { Body, Controller, Get, Param, Post, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { Permission } from "@common/auth";
-import { RequirePermissions } from "../../common/decorators/permissions.decorator";
-import { ProxyService } from "../../common/services/proxy.service";
+import { RequirePermissions } from "../../../../common/decorators/permissions.decorator";
+import { ProxyService } from "../../../../common/services/proxy.service";
 import { ConfigService } from "@nestjs/config";
-import { CreateImageOptimizationJobDto } from "./dto/create-image-optimization-job.dto";
+import { CreateImageOptimizationJobDto } from "../../dto/create-image-optimization-job.dto";
 
 @Controller("seller/ai/image-optimization")
 export class ImageOptimizationProxyController {

@@ -3,8 +3,8 @@
 import { Controller, Get, Req, Res } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Request, Response } from "express";
-import { Public } from "../../common/decorators/public.decorator";
-import { ProxyService } from "../../common/services/proxy.service";
+import { Public } from "../../../../common/decorators/public.decorator";
+import { ProxyService } from "../../../../common/services/proxy.service";
 
 @Public()
 @Controller("shipping/locations")

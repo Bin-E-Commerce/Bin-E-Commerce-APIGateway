@@ -1,7 +1,7 @@
 import { All, Controller, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { ConfigService } from "@nestjs/config";
-import { ProxyService } from "../../common/services/proxy.service";
+import { ProxyService } from "../../../../common/services/proxy.service";
 
 // File này dùng để proxy các request liên quan đến user profile, role management, etc. (tức là những thứ không phải authentication flow)
 // Các route này sẽ được auth-service xử lý, api-gateway chỉ đóng vai trò trung gian chuyển tiếp request và response.
