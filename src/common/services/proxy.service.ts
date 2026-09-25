@@ -73,22 +73,41 @@ export class ProxyService {
   }
 
   // Forward binary response như nhãn PDF mà không ép dữ liệu thành JSON.
-  async forwardBinary(targetUrl: string, req: Request): Promise<{ data: Buffer; status: number; headers: Record<string, string | string[]> }> {
+  async forwardBinary(
+    targetUrl: string,
+    req: Request,
+  ): Promise<{
+    data: Buffer;
+    status: number;
+    headers: Record<string, string | string[]>;
+  }> {
     try {
-      const response = await firstValueFrom(this.httpService.request<Buffer>({
-        method: req.method as AxiosRequestConfig["method"],
-        url: targetUrl,
-        data: req.body,
-        headers: this.buildForwardHeaders(req),
-        params: req.query,
-        responseType: "arraybuffer",
-        validateStatus: () => true,
-      }));
-      return { data: Buffer.from(response.data), status: response.status, headers: response.headers as Record<string, string | string[]> };
+      const response = await firstValueFrom(
+        this.httpService.request<Buffer>({
+          method: req.method as AxiosRequestConfig["method"],
+          url: targetUrl,
+          data: req.body,
+          headers: this.buildForwardHeaders(req),
+          params: req.query,
+          responseType: "arraybuffer",
+          validateStatus: () => true,
+        }),
+      );
+      return {
+        data: Buffer.from(response.data),
+        status: response.status,
+        headers: response.headers as Record<string, string | string[]>,
+      };
     } catch (err) {
       const axiosErr = err as AxiosError;
-      this.logger.error(`Proxy binary error to ${targetUrl}: ${axiosErr.message}`);
-      if (axiosErr.response) throw new HttpException(axiosErr.response.data as object, axiosErr.response.status);
+      this.logger.error(
+        `Proxy binary error to ${targetUrl}: ${axiosErr.message}`,
+      );
+      if (axiosErr.response)
+        throw new HttpException(
+          axiosErr.response.data as object,
+          axiosErr.response.status,
+        );
       throw new ServiceUnavailableException("Upstream service unavailable");
     }
   }
@@ -130,8 +149,9 @@ export class ProxyService {
       forward["cookie"] = req.headers["cookie"];
     }
 
-    // Forward IP address để downstream service có thể biết được IP gốc của client, hữu ích cho logging hoặc rate limiting
-    const ip = req.headers["x-forwarded-for"] ?? req.socket.remoteAddress;
+    // Chỉ lấy IP đã được Express chuẩn hóa từ proxy tin cậy. Không dùng trực tiếp
+    // x-forwarded-for do client tự gửi, vì header đó có thể bị giả mạo và làm sai audit.
+    const ip = req.ip ?? req.socket.remoteAddress;
     if (ip) forward["x-forwarded-for"] = String(ip);
 
     return forward;

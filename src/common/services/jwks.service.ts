@@ -28,9 +28,13 @@ interface AuthViewerResponse {
   data?: {
     // Auth Service trả ID nội bộ để các bounded context dùng chung ownership contract với các bảng nghiệp vụ.
     id?: string;
+    // Email local la fallback cho access token Google khong co claim email.
+    email?: string;
     permissions?: Permission[];
     name?: string;
     avatarUrl?: string | null;
+    role?: string;
+    roles?: string[];
   };
 }
 
@@ -107,9 +111,9 @@ export class JwksService implements OnModuleInit {
       algorithms: ["RS256"],
       issuer: this.expectedIssuer,
     }) as KeycloakAccessTokenPayload;
-    const roles = this.extractRoles(payload);
+    const tokenRoles = this.extractRoles(payload);
     const keycloakUserId = payload.sub ?? "";
-    const viewer = await this.resolveDynamicViewer(keycloakUserId, roles);
+    const viewer = await this.resolveDynamicViewer(keycloakUserId, tokenRoles);
     // Không dùng Keycloak subject cho ownership nghiệp vụ: Product, Seller, Cart và Order lưu Auth DB user ID.
     // Nếu viewer thiếu ID nội bộ thì fail closed thay vì chuyển nhầm một ID hợp lệ nhưng thuộc namespace khác.
     if (!viewer.id) throw new Error("Auth viewer is missing internal user ID");
@@ -117,7 +121,9 @@ export class JwksService implements OnModuleInit {
     return {
       sub: keycloakUserId,
       userId: viewer.id,
-      email: payload.email ?? "",
+      // Profile local la nguon chinh; access token social co the khong co email claim,
+      // nhung downstream Seller Service van can email da duoc Auth Service xac minh.
+      email: viewer.email ?? payload.email ?? "",
       name:
         viewer.name ??
         payload.name ??
@@ -126,7 +132,7 @@ export class JwksService implements OnModuleInit {
         "",
       avatarUrl:
         viewer.avatarUrl ?? payload.picture ?? payload.avatar_url ?? null,
-      roles,
+      roles: viewer.roles ?? (viewer.role ? [viewer.role] : []),
       permissions: viewer.permissions ?? [],
       iss: payload.iss ?? "",
       exp: payload.exp ?? 0,
