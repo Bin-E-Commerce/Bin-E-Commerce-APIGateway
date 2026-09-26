@@ -4,31 +4,51 @@ import { Controller, Get, Param, Post, Req, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { Permission } from '@common/auth';
-import { RequirePermissions } from '../../../../common/decorators/permissions.decorator';
-import { ProxyService } from '../../../../common/services/proxy.service';
+import { RequirePermissions } from '@/common/decorators/permissions.decorator';
+import { ProxyService } from '@/common/services/proxy.service';
 
 @Controller('orders')
 export class CustomerShippingProxyController {
-  private readonly targetBase: string;
+    private readonly targetBase: string;
 
-  // Đọc Shipping Service URL tập trung để không hard-code endpoint trong controller.
-  constructor(config: ConfigService, private readonly proxyService: ProxyService) {
-    this.targetBase = config.get<string>('SHIPPING_SERVICE_URL', 'http://localhost:3012');
-  }
+    // Đọc Shipping Service URL tập trung để không hard-code endpoint trong controller.
+    constructor(
+        config: ConfigService,
+        private readonly proxyService: ProxyService,
+    ) {
+        this.targetBase = config.get<string>(
+            'SHIPPING_SERVICE_URL',
+            'http://localhost:3012',
+        );
+    }
 
-  // Customer tracking chỉ được gọi với permission own-scope do Gateway resolve từ JWT.
-  @Get(':orderId/tracking')
-  @RequirePermissions(Permission.SHIPPING_TRACKING_READ)
-  async get(@Param('orderId') orderId: string, @Req() request: Request, @Res() response: Response): Promise<void> {
-    const result = await this.proxyService.forward(`${this.targetBase}/api/v1/orders/${orderId}/tracking`, request);
-    response.status(result.status).json(result.data);
-  }
+    // Customer tracking chỉ được gọi với permission own-scope do Gateway resolve từ JWT.
+    @Get(':orderId/tracking')
+    @RequirePermissions(Permission.SHIPPING_TRACKING_READ)
+    async get(
+        @Param('orderId') orderId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const result = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/orders/${orderId}/tracking`,
+            request,
+        );
+        response.status(result.status).json(result.data);
+    }
 
-  // Customer chỉ được bỏ qua một chặng của đúng return request sau khi Shipping Service kiểm tra ownership.
-  @Post('returns/:returnId/shipment/demo/advance')
-  @RequirePermissions(Permission.SHIPPING_TRACKING_READ)
-  async advanceReturnDemo(@Param('returnId') returnId: string, @Req() request: Request, @Res() response: Response): Promise<void> {
-    const result = await this.proxyService.forward(`${this.targetBase}/api/v1/orders/returns/${returnId}/shipment/demo/advance`, request);
-    response.status(result.status).json(result.data);
-  }
+    // Customer chỉ được bỏ qua một chặng của đúng return request sau khi Shipping Service kiểm tra ownership.
+    @Post('returns/:returnId/shipment/demo/advance')
+    @RequirePermissions(Permission.SHIPPING_TRACKING_READ)
+    async advanceReturnDemo(
+        @Param('returnId') returnId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const result = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/orders/returns/${returnId}/shipment/demo/advance`,
+            request,
+        );
+        response.status(result.status).json(result.data);
+    }
 }

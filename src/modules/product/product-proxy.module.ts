@@ -1,11 +1,11 @@
-import { Module } from "@nestjs/common";
-import { HttpModule } from "@nestjs/axios";
-import { ProxyService } from "../../common/services/proxy.service";
-import { ProductProxyController } from "./product-proxy.controller";
+import { Module } from '@nestjs/common';
+import { HttpModule } from '@nestjs/axios';
+import { ProxyService } from '@/common/services/proxy.service';
+import { ProductProxyController } from '@/modules/product/product-proxy.controller';
 
 @Module({
-  imports: [HttpModule],
-  controllers: [ProductProxyController],
-  providers: [ProxyService],
+    imports: [HttpModule],
+    controllers: [ProductProxyController],
+    providers: [ProxyService],
 })
 export class ProductProxyModule {}

@@ -1,10 +1,10 @@
-import { SetMetadata } from "@nestjs/common";
+import { SetMetadata } from '@nestjs/common';
 
-export const IS_PUBLIC_KEY = "isPublic";
+export const IS_PUBLIC_KEY = 'isPublic';
 
 // Dùng để đánh dấu các route hoặc controller không yêu cầu xác thực JWT
 export const Public = (): MethodDecorator & ClassDecorator =>
-  SetMetadata(IS_PUBLIC_KEY, true);
+    SetMetadata(IS_PUBLIC_KEY, true);
 
 // Tạo ra một decorator @Public() có thể áp dụng cho cả phương thức
 // và lớp để chỉ định rằng chúng không yêu cầu xác thực JWT.
