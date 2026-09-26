@@ -13,7 +13,11 @@ COPY package.json package-lock.json tsconfig.base.json ./
 
 # Gateway dùng npm workspace ở services/api-gateway và import mã chung qua alias
 # @common. Chỉ copy manifest/tsconfig cần cho dependency và package chung cần compile.
-COPY services/api-gateway/package.json services/api-gateway/tsconfig.json ./services/api-gateway/
+COPY services/api-gateway/package.json \
+  services/api-gateway/tsconfig.json \
+  services/api-gateway/tsconfig.build.json \
+  services/api-gateway/nest-cli.json \
+  ./services/api-gateway/
 COPY packages/common ./packages/common
 
 # npm ci bảo đảm dependency đúng với package-lock.json, tránh việc mỗi lần build
