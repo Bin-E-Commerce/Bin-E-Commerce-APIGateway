@@ -106,6 +106,16 @@ export class SellerProxyController {
         await this.proxyToSeller(req, res);
     }
 
+    // Dashboard chỉ cần quyền đọc tổng quan seller; Gateway không tổng hợp dữ liệu từ downstream.
+    @Get('dashboard/overview')
+    @RequirePermissions(Permission.SELLER_DASHBOARD_VIEW)
+    async proxyDashboardOverview(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        await this.proxyToSeller(req, res);
+    }
+
     // Quyền cập nhật được tách khỏi quyền đọc để sau này tài khoản nhân viên shop có thể chỉ xem hồ sơ.
     @Patch('shop/profile')
     @RequirePermissions(Permission.SELLER_SHOP_PROFILE_UPDATE)
