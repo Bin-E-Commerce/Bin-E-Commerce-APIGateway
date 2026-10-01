@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { AxiosError, AxiosRequestConfig } from 'axios';
+import { Readable } from 'node:stream';
 import type { Request } from 'express';
 import { firstValueFrom } from 'rxjs';
 
@@ -120,6 +121,67 @@ export class ProxyService {
             throw new ServiceUnavailableException(
                 'Upstream service unavailable',
             );
+        }
+    }
+
+    // Forward SSE bằng stream để Gateway không buffer toàn bộ câu trả lời AI trước khi trả về browser.
+    // Dùng pipe để giữ backpressure tự nhiên của Node; khi browser đóng connection, upstream cũng bị destroy.
+    // Gateway không parse/chỉnh sửa event payload, nên contract SSE của Seller Service được giữ nguyên.
+    async forwardStream(
+        targetUrl: string,
+        req: Request,
+        res: import('express').Response,
+    ): Promise<void> {
+        try {
+            const upstream = await firstValueFrom(
+                this.httpService.request({
+                    method: req.method as AxiosRequestConfig['method'],
+                    url: targetUrl,
+                    data: req.body,
+                    headers: this.buildForwardHeaders(req),
+                    params: req.query,
+                    responseType: 'stream',
+                    timeout: 0,
+                    validateStatus: () => true,
+                }),
+            );
+
+            res.status(upstream.status);
+            res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+            res.setHeader('Cache-Control', 'no-cache, no-transform');
+            res.setHeader('Connection', 'keep-alive');
+            res.setHeader('X-Accel-Buffering', 'no');
+            res.flushHeaders();
+
+            const stream = upstream.data as Readable;
+            const cleanup = () => {
+                if (!stream.destroyed) stream.destroy();
+            };
+            req.on('close', cleanup);
+            res.on('close', cleanup);
+            stream.pipe(res);
+            stream.on('end', () => {
+                req.off('close', cleanup);
+                res.off('close', cleanup);
+            });
+            stream.on('error', () => {
+                req.off('close', cleanup);
+                res.off('close', cleanup);
+                if (!res.headersSent) res.status(502);
+                res.end();
+            });
+        } catch (err) {
+            const axiosErr = err as AxiosError;
+            this.logger.error(
+                `Proxy stream error to ${targetUrl}: ${axiosErr.message}`,
+            );
+            if (!res.headersSent) {
+                res.status(503).json({
+                    message: 'Upstream service unavailable',
+                });
+            } else {
+                res.end();
+            }
         }
     }
 

@@ -1,3 +1,5 @@
+// Controller này khai báo các route Seller mà Gateway được phép proxy.
+// Copilot có route SSE riêng để giữ streaming; các route lịch sử/feedback dùng proxy JSON chuẩn và cùng permission.
 import { Controller, Delete, Get, Patch, Post, Req, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
@@ -110,6 +112,81 @@ export class SellerProxyController {
     @Get('dashboard/overview')
     @RequirePermissions(Permission.SELLER_DASHBOARD_VIEW)
     async proxyDashboardOverview(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        await this.proxyToSeller(req, res);
+    }
+
+    // Route SSE có permission riêng và dùng stream pass-through, không dùng proxyToSeller vì proxy JSON sẽ làm mất tính incremental.
+    @Post('ai/copilot/chat/stream')
+    @RequirePermissions(Permission.SELLER_AI_COPILOT_CHAT)
+    async proxyCopilotChatStream(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        const path = req.path.replace(/^\/api/, '');
+        await this.proxyService.forwardStream(
+            `${this.targetBase}/api${path}`,
+            req,
+            res,
+        );
+    }
+
+    // Lịch sử Copilot đi qua cùng permission và được Seller Service lọc theo ownership của shop.
+    @Get('ai/copilot/conversations')
+    @RequirePermissions(Permission.SELLER_AI_COPILOT_CHAT)
+    async proxyCopilotConversations(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        await this.proxyToSeller(req, res);
+    }
+
+    // Chỉ cho đọc conversation thuộc user hiện tại; Seller Service kiểm tra ownership lần hai.
+    @Get('ai/copilot/conversations/:conversationId')
+    @RequirePermissions(Permission.SELLER_AI_COPILOT_CHAT)
+    async proxyCopilotConversation(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        await this.proxyToSeller(req, res);
+    }
+
+    // Proxy command pin/unpin conversation với cùng permission đọc Copilot; Seller Service vẫn kiểm tra ownership lần hai.
+    @Patch('ai/copilot/conversations/:conversationId/pin')
+    @RequirePermissions(Permission.SELLER_AI_COPILOT_CHAT)
+    async proxyPinCopilotConversation(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        await this.proxyToSeller(req, res);
+    }
+
+    // Proxy command đổi title với cùng permission Copilot; Seller Service vẫn kiểm tra ownership lần hai.
+    @Patch('ai/copilot/conversations/:conversationId/title')
+    @RequirePermissions(Permission.SELLER_AI_COPILOT_CHAT)
+    async proxyRenameCopilotConversation(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        await this.proxyToSeller(req, res);
+    }
+
+    // Proxy command xóa conversation với cùng permission Copilot; Seller Service vẫn kiểm tra ownership và transaction cleanup.
+    @Delete('ai/copilot/conversations/:conversationId')
+    @RequirePermissions(Permission.SELLER_AI_COPILOT_CHAT)
+    async proxyDeleteCopilotConversation(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        await this.proxyToSeller(req, res);
+    }
+
+    // Feedback chỉ là telemetry đánh giá câu trả lời, không phải command thay đổi dữ liệu seller.
+    @Post('ai/copilot/feedback')
+    @RequirePermissions(Permission.SELLER_AI_COPILOT_CHAT)
+    async proxyCopilotFeedback(
         @Req() req: Request,
         @Res() res: Response,
     ): Promise<void> {
