@@ -83,6 +83,7 @@ export class ProxyService {
     }
 
     // Forward binary response như nhãn PDF mà không ép dữ liệu thành JSON.
+    // Dùng cho các endpoint trả về file hoặc dữ liệu nhị phân, ví dụ như PDF, hình ảnh, video.
     async forwardBinary(
         targetUrl: string,
         req: Request,
@@ -125,14 +126,20 @@ export class ProxyService {
     }
 
     // Forward SSE bằng stream để Gateway không buffer toàn bộ câu trả lời AI trước khi trả về browser.
-    // Dùng pipe để giữ backpressure tự nhiên của Node; khi browser đóng connection, upstream cũng bị destroy.
-    // Gateway không parse/chỉnh sửa event payload, nên contract SSE của Seller Service được giữ nguyên.
+    // Theo dõi response của browser (không phải request body) để chỉ hủy upstream khi client thật sự rời đi.
+    // Nếu upstream lỗi sau khi headers đã gửi, phát SSE error để frontend không hiểu EOF là hoàn tất thành công.
     async forwardStream(
         targetUrl: string,
         req: Request,
         res: import('express').Response,
     ): Promise<void> {
+        const abortController = new AbortController();
+        const handleClientClose = () => abortController.abort();
+        // Client có thể dừng khi Gateway còn chờ Seller Service trả headers; hủy cả request upstream đang chờ.
+        res.once('close', handleClientClose);
+
         try {
+            // Thực hiện request đến targetUrl bằng HttpService và chờ response dạng stream
             const upstream = await firstValueFrom(
                 this.httpService.request({
                     method: req.method as AxiosRequestConfig['method'],
@@ -143,8 +150,17 @@ export class ProxyService {
                     responseType: 'stream',
                     timeout: 0,
                     validateStatus: () => true,
+                    signal: abortController.signal,
                 }),
             );
+
+            // Nếu client đã hủy request trong lúc chờ upstream, không log như lỗi dịch vụ và không ghi vào socket đóng.
+            res.off('close', handleClientClose);
+            if (abortController.signal.aborted || res.destroyed) {
+                const abandonedStream = upstream.data as Readable;
+                abandonedStream.destroy();
+                return;
+            }
 
             res.status(upstream.status);
             res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
@@ -153,24 +169,48 @@ export class ProxyService {
             res.setHeader('X-Accel-Buffering', 'no');
             res.flushHeaders();
 
+            // Forward tất cả các header từ upstream, ngoại trừ những header có thể gây lỗi khi gửi đến client (ví dụ: transfer-encoding, content-length)
             const stream = upstream.data as Readable;
             const cleanup = () => {
+                res.off('close', cleanup);
                 if (!stream.destroyed) stream.destroy();
             };
-            req.on('close', cleanup);
-            res.on('close', cleanup);
-            stream.pipe(res);
-            stream.on('end', () => {
-                req.off('close', cleanup);
-                res.off('close', cleanup);
-            });
-            stream.on('error', () => {
-                req.off('close', cleanup);
-                res.off('close', cleanup);
-                if (!res.headersSent) res.status(502);
+            const removeCloseListener = () => res.off('close', cleanup);
+            res.once('close', cleanup);
+            stream.once('end', removeCloseListener);
+            stream.once('error', (error: Error) => {
+                removeCloseListener();
+                if (res.destroyed || res.writableEnded) return;
+
+                const requestId = String(
+                    req.headers['x-request-id'] ?? 'unknown',
+                );
+                this.logger.error(
+                    JSON.stringify({
+                        event: 'seller_copilot_upstream_stream_failed',
+                        requestId,
+                        errorType: error.name,
+                    }),
+                );
+
+                // Headers đã gửi nên không đổi status; chuẩn hóa lỗi thành event mà client biết cách hiển thị.
+                res.write(
+                    `event: error\ndata: ${JSON.stringify({
+                        type: 'error',
+                        code: 'COPILOT_UPSTREAM_STREAM_FAILED',
+                        retryable: true,
+                        message:
+                            'Kết nối tới trợ lý bị gián đoạn. Bạn thử lại giúp mình nhé.',
+                    })}\n\n`,
+                );
                 res.end();
             });
+            stream.pipe(res);
         } catch (err) {
+            res.off('close', handleClientClose);
+            // Browser đã hủy request trong lúc chờ upstream; không log như lỗi dịch vụ và không ghi vào socket đóng.
+            if (abortController.signal.aborted || res.destroyed) return;
+
             const axiosErr = err as AxiosError;
             this.logger.error(
                 `Proxy stream error to ${targetUrl}: ${axiosErr.message}`,
