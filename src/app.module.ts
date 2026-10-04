@@ -28,6 +28,7 @@ import { OrderProxyModule } from '@/modules/order/order-proxy.module';
 import { ShippingProxyModule } from '@/modules/shipping/shipping-proxy.module';
 import { ShopProxyModule } from '@/modules/shop/shop-proxy.module';
 import { RecommendationProxyModule } from '@/modules/recommendation/recommendation-proxy.module';
+import { SellerKnowledgeProxyModule } from '@/modules/seller-knowledge/seller-knowledge-proxy.module';
 
 @Module({
     imports: [
@@ -73,6 +74,7 @@ import { RecommendationProxyModule } from '@/modules/recommendation/recommendati
         ShippingProxyModule,
         ShopProxyModule,
         RecommendationProxyModule,
+        SellerKnowledgeProxyModule,
     ],
     providers: [
         {
