@@ -93,6 +93,16 @@ export class AdminSellerKnowledgeProxyController {
         await this.forward(req, res);
     }
 
+    // POST /admin/seller-knowledge/documents/:id/restore phục hồi tài liệu đã ngừng; trạng thái nhóm vẫn được quản lý riêng.
+    @Post('documents/:id/restore')
+    @RequirePermissions(Permission.ADMIN_SELLER_KNOWLEDGE_WRITE)
+    async restoreDocument(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        await this.forward(req, res);
+    }
+
     // POST /admin/seller-knowledge/documents/:id/revisions tạo revision nháp mới từ nội dung admin gửi.
     // Revision đã xuất bản được giữ nguyên; việc ghi nội dung mới chỉ cần quyền write, chưa tự publish.
     @Post('documents/:id/revisions')
