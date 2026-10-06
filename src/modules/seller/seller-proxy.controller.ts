@@ -133,6 +133,31 @@ export class SellerProxyController {
         );
     }
 
+    // Cho phép tạo mode-session qua đúng quyền Copilot; Seller Service vẫn xác minh owner/shop của conversation.
+    @Post('ai/copilot/conversations/:conversationId/mode-sessions')
+    @RequirePermissions(Permission.SELLER_AI_COPILOT_CHAT)
+    async proxyCopilotModeSession(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        await this.proxyToSeller(req, res);
+    }
+
+    // Proxy xác nhận proposal tồn kho qua quyền Copilot; Product Service còn kiểm tra permission chỉnh sản phẩm và ownership.
+    @Post('ai/copilot/actions/:proposalId/confirm')
+    @RequirePermissions(Permission.SELLER_AI_COPILOT_CHAT)
+    async proxyConfirmCopilotAction(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        const path = req.path.replace(/^\/api/, '');
+        await this.proxyService.forwardStream(
+            `${this.targetBase}/api${path}`,
+            req,
+            res,
+        );
+    }
+
     // Lịch sử Copilot đi qua cùng permission và được Seller Service lọc theo ownership của shop.
     @Get('ai/copilot/conversations')
     @RequirePermissions(Permission.SELLER_AI_COPILOT_CHAT)
