@@ -158,6 +158,26 @@ export class SellerProxyController {
         );
     }
 
+    // Batch là JSON, backend trả kết quả riêng từng dòng; route vẫn dùng đúng quyền Copilot và downstream tự kiểm tra quyền sản phẩm.
+    @Post('ai/copilot/actions/confirm-batch')
+    @RequirePermissions(Permission.SELLER_AI_COPILOT_CHAT)
+    async proxyConfirmCopilotActionBatch(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        await this.proxyToSeller(req, res);
+    }
+
+    // Cập nhật preview low-stock còn pending; Seller Service xác minh tenant/TTL rồi mới lưu target mới.
+    @Patch('ai/copilot/actions/:proposalId')
+    @RequirePermissions(Permission.SELLER_AI_COPILOT_CHAT)
+    async proxyReviseCopilotAction(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        await this.proxyToSeller(req, res);
+    }
+
     // Lịch sử Copilot đi qua cùng permission và được Seller Service lọc theo ownership của shop.
     @Get('ai/copilot/conversations')
     @RequirePermissions(Permission.SELLER_AI_COPILOT_CHAT)
