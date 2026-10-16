@@ -5,11 +5,14 @@ import { HttpModule } from '@nestjs/axios';
 import { ProxyService } from '@/common/services/proxy.service';
 import { OrderProxyController } from '@/modules/order/controllers/customer/order-proxy.controller';
 import { SellerOrderProxyController } from '@/modules/order/controllers/seller/seller-order-proxy.controller';
+import { VnpayIpnProxyController } from '@/modules/order/controllers/customer/vnpay-ipn-proxy.controller';
+import { SellerFinanceProxyController } from '@/modules/order/controllers/seller/seller-finance-proxy.controller';
+import { AdminFinanceProxyController } from '@/modules/order/controllers/admin/admin-finance-proxy.controller';
 
 // Module proxy độc lập giúp Gateway tổ chức theo từng domain nghiệp vụ.
 @Module({
     imports: [HttpModule],
-    controllers: [OrderProxyController, SellerOrderProxyController],
+    controllers: [OrderProxyController, SellerOrderProxyController, VnpayIpnProxyController, SellerFinanceProxyController, AdminFinanceProxyController],
     providers: [ProxyService],
 })
 export class OrderProxyModule {}

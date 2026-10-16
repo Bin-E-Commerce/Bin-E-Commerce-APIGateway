@@ -23,15 +23,15 @@ export class ProxyService {
     // Khởi tạo ProxyService với HttpService để thực hiện các request HTTP đến các microservices khác
     constructor(private readonly httpService: HttpService) {}
 
-    // Phương thức chính để forward request đến targetUrl
-    // Xây dựng cấu hình request dựa trên request gốc
-    // Và xử lý response cũng như lỗi một cách hiệu quả
-    // Mục đích hàm này là để chuyển tiếp request từ API Gateway đến các microservices khác
-    // Đồng thời đảm bảo rằng các lỗi từ upstream service được trả về đúng cách cho client
+    // Chuyển tiếp request và giữ nguyên response/status của upstream để gateway không đổi hợp đồng API.
+    // Mặc định query được serialize từ req.query; callback có thể tắt phần này khi targetUrl đã chứa query gốc.
+    // Tùy chọn đó ngăn lặp tham số đã ký, nhưng không thay đổi hành vi của các proxy hiện hữu.
+    // Lỗi mạng không có response được ánh xạ thành 503; lỗi HTTP upstream vẫn được trả nguyên status/body.
     async forward(
         targetUrl: string,
         req: Request,
         additionalHeaders: Record<string, string> = {},
+        options: { includeQueryParams?: boolean } = {},
     ): Promise<{
         data: unknown;
         status: number;
@@ -42,7 +42,8 @@ export class ProxyService {
             url: targetUrl,
             data: req.body,
             headers: this.buildForwardHeaders(req), // Xây dựng header để forward, bao gồm cả thông tin người dùng được inject từ JWT guard
-            params: req.query, // Forward query parameters, ví dụ như ?page=1&limit=10
+            // URL có thể đã mang query thô cần giữ nguyên chữ ký, nên chỉ serialize req.query khi được bật.
+            params: options.includeQueryParams === false ? undefined : req.query,
             validateStatus: () => true, // Cho phép xử lý tất cả các status code trong response, không tự động throw lỗi cho status >= 400 để chúng ta có thể trả về đúng lỗi từ upstream service cho client
         };
         // Header nội bộ được thêm sau context client để browser không thể ghi đè service identity.
