@@ -72,6 +72,20 @@ export class AdminFinanceProxyController {
         response.status(status).json(data);
     }
 
+    // Chỉ admin có quyền đọc tài chính được xem COD đã hoàn tất đang chờ đối soát remittance.
+    @Get('cod-remittances')
+    @RequirePermissions(Permission.ADMIN_FINANCE_READ)
+    async getPendingCodRemittances(
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/admin/finance/cod-remittances`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
     // Chỉ quyền payout mới cho phép xem tài khoản nhận đầy đủ để admin tự chuyển khoản ngoài hệ thống.
     @Get('withdrawals/:withdrawalId')
     @RequirePermissions(Permission.ADMIN_FINANCE_PAYOUT)
@@ -102,21 +116,6 @@ export class AdminFinanceProxyController {
         response.status(status).json(data);
     }
 
-    // Chỉ sau chuyển khoản thủ công admin mới xác nhận PAID và chốt trừ số dư seller.
-    @Post('withdrawals/:withdrawalId/paid')
-    @RequirePermissions(Permission.ADMIN_FINANCE_PAYOUT)
-    async confirmWithdrawalPaid(
-        @Param('withdrawalId', new ParseUUIDPipe()) withdrawalId: string,
-        @Req() request: Request,
-        @Res() response: Response,
-    ): Promise<void> {
-        const { data, status } = await this.proxyService.forward(
-            `${this.targetBase}/api/v1/admin/finance/withdrawals/${withdrawalId}/paid`,
-            request,
-        );
-        response.status(status).json(data);
-    }
-
     // Từ chối payout giải phóng khoản giữ chỗ về ví và không tạo dòng tiền ra nền tảng.
     @Post('withdrawals/:withdrawalId/reject')
     @RequirePermissions(Permission.ADMIN_FINANCE_PAYOUT)
@@ -127,21 +126,6 @@ export class AdminFinanceProxyController {
     ): Promise<void> {
         const { data, status } = await this.proxyService.forward(
             `${this.targetBase}/api/v1/admin/finance/withdrawals/${withdrawalId}/reject`,
-            request,
-        );
-        response.status(status).json(data);
-    }
-
-    // Chuyển khoản lỗi cũng nhả khoản giữ chỗ; UI có thể yêu cầu seller gửi lại sau khi sửa ngân hàng.
-    @Post('withdrawals/:withdrawalId/fail')
-    @RequirePermissions(Permission.ADMIN_FINANCE_PAYOUT)
-    async failWithdrawal(
-        @Param('withdrawalId', new ParseUUIDPipe()) withdrawalId: string,
-        @Req() request: Request,
-        @Res() response: Response,
-    ): Promise<void> {
-        const { data, status } = await this.proxyService.forward(
-            `${this.targetBase}/api/v1/admin/finance/withdrawals/${withdrawalId}/fail`,
             request,
         );
         response.status(status).json(data);
@@ -206,16 +190,31 @@ export class AdminFinanceProxyController {
         response.status(status).json(data);
     }
 
-    // Retry chỉ dành cho hoàn VNPay đã lỗi xác định; trạng thái chưa rõ không được phát sinh requestId mới.
-    @Post('vnpay-refunds/:returnId/retry')
+    // Forward xác nhận hoàn Pay2S thủ công; Order Service kiểm tra amount, trạng thái và proof trong transaction.
+    @Post('refunds/:returnId/confirmation')
     @RequirePermissions(Permission.ADMIN_FINANCE_RECONCILE)
-    async retryVnpayRefund(
+    async confirmPay2sRefund(
         @Param('returnId', new ParseUUIDPipe()) returnId: string,
         @Req() request: Request,
         @Res() response: Response,
     ): Promise<void> {
         const { data, status } = await this.proxyService.forward(
-            `${this.targetBase}/api/v1/admin/finance/vnpay-refunds/${returnId}/retry`,
+            `${this.targetBase}/api/v1/admin/finance/refunds/${returnId}/confirmation`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
+    // Forward refund của late Pay2S payment; route riêng vì giao dịch này không có return request.
+    @Post('late-refunds/:orderId/confirmation')
+    @RequirePermissions(Permission.ADMIN_FINANCE_RECONCILE)
+    async confirmPay2sLateRefund(
+        @Param('orderId', new ParseUUIDPipe()) orderId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/admin/finance/late-refunds/${orderId}/confirmation`,
             request,
         );
         response.status(status).json(data);
