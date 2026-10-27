@@ -58,6 +58,20 @@ export class AdminFinanceProxyController {
         response.status(status).json(data);
     }
 
+    // Trạng thái cấu hình chỉ lộ cho admin có quyền payout và không chứa API Key.
+    @Get('payout-readiness')
+    @RequirePermissions(Permission.ADMIN_FINANCE_PAYOUT)
+    async getPayoutReadiness(
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/admin/finance/payout-readiness`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
     // Danh sách yêu cầu rút dùng mã tài khoản đã mask; detail có quyền payout riêng.
     @Get('withdrawals')
     @RequirePermissions(Permission.ADMIN_FINANCE_READ)
