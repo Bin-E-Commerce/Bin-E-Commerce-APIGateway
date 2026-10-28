@@ -6,7 +6,7 @@ import { ProxyService } from '@/common/services/proxy.service';
 import { OrderProxyController } from '@/modules/order/controllers/customer/order-proxy.controller';
 import { SellerOrderProxyController } from '@/modules/order/controllers/seller/seller-order-proxy.controller';
 import { Pay2sCallbackProxyController } from '@/modules/order/controllers/customer/pay2s-callback-proxy.controller';
-import { SepayPayoutProxyController } from '@/modules/order/controllers/customer/sepay-payout-proxy.controller';
+import { Pay2sPayoutProxyController } from '@/modules/order/controllers/customer/pay2s-payout-proxy.controller';
 import { SellerFinanceProxyController } from '@/modules/order/controllers/seller/seller-finance-proxy.controller';
 import { AdminFinanceProxyController } from '@/modules/order/controllers/admin/admin-finance-proxy.controller';
 
@@ -17,7 +17,7 @@ import { AdminFinanceProxyController } from '@/modules/order/controllers/admin/a
         OrderProxyController,
         SellerOrderProxyController,
         Pay2sCallbackProxyController,
-        SepayPayoutProxyController,
+        Pay2sPayoutProxyController,
         SellerFinanceProxyController,
         AdminFinanceProxyController,
     ],

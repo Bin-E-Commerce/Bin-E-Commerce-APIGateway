@@ -130,6 +130,21 @@ export class AdminFinanceProxyController {
         response.status(status).json(data);
     }
 
+    // Chuyển tiếp bước chốt giao dịch Pay2S sau khi backend xác nhận candidate và admin xác minh đúng người nhận.
+    @Post('withdrawals/:withdrawalId/transfer-confirmation')
+    @RequirePermissions(Permission.ADMIN_FINANCE_PAYOUT)
+    async confirmWithdrawalTransfer(
+        @Param('withdrawalId', new ParseUUIDPipe()) withdrawalId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/admin/finance/withdrawals/${withdrawalId}/transfer-confirmation`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
     // Từ chối payout giải phóng khoản giữ chỗ về ví và không tạo dòng tiền ra nền tảng.
     @Post('withdrawals/:withdrawalId/reject')
     @RequirePermissions(Permission.ADMIN_FINANCE_PAYOUT)
@@ -199,36 +214,6 @@ export class AdminFinanceProxyController {
     ): Promise<void> {
         const { data, status } = await this.proxyService.forward(
             `${this.targetBase}/api/v1/admin/finance/cod-refunds/${returnId}/confirmation`,
-            request,
-        );
-        response.status(status).json(data);
-    }
-
-    // Forward xác nhận hoàn Pay2S thủ công; Order Service kiểm tra amount, trạng thái và proof trong transaction.
-    @Post('refunds/:returnId/confirmation')
-    @RequirePermissions(Permission.ADMIN_FINANCE_RECONCILE)
-    async confirmPay2sRefund(
-        @Param('returnId', new ParseUUIDPipe()) returnId: string,
-        @Req() request: Request,
-        @Res() response: Response,
-    ): Promise<void> {
-        const { data, status } = await this.proxyService.forward(
-            `${this.targetBase}/api/v1/admin/finance/refunds/${returnId}/confirmation`,
-            request,
-        );
-        response.status(status).json(data);
-    }
-
-    // Forward refund của late Pay2S payment; route riêng vì giao dịch này không có return request.
-    @Post('late-refunds/:orderId/confirmation')
-    @RequirePermissions(Permission.ADMIN_FINANCE_RECONCILE)
-    async confirmPay2sLateRefund(
-        @Param('orderId', new ParseUUIDPipe()) orderId: string,
-        @Req() request: Request,
-        @Res() response: Response,
-    ): Promise<void> {
-        const { data, status } = await this.proxyService.forward(
-            `${this.targetBase}/api/v1/admin/finance/late-refunds/${orderId}/confirmation`,
             request,
         );
         response.status(status).json(data);
