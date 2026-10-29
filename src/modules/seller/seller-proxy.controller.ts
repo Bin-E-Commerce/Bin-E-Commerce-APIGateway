@@ -32,6 +32,16 @@ export class SellerProxyController {
         await this.proxyToSeller(req, res);
     }
 
+    // Chỉ admin/staff có quyền đọc hồ sơ seller mới xem được chuỗi hoạt động tổng hợp theo ngày.
+    @Get('applications/admin/activity')
+    @RequirePermissions(Permission.SELLER_APPLICATION_READ)
+    async proxyAdminApplicationActivity(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        await this.proxyToSeller(req, res);
+    }
+
     // Bảo vệ route chi tiết hồ sơ seller bằng cùng permission đọc hồ sơ trước khi chuyển request xuống seller-service.
     @Get('applications/admin/:id')
     @RequirePermissions(Permission.SELLER_APPLICATION_READ)

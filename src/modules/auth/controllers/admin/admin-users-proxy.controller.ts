@@ -1,4 +1,4 @@
-import { All, Controller, Req, Res, UseGuards } from '@nestjs/common';
+import { All, Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { Permission } from '@common/auth';
@@ -23,6 +23,16 @@ export class AdminUsersProxyController {
             'AUTH_SERVICE_URL',
             'http://auth-service:3002',
         );
+    }
+
+    // Chỉ permission quản lý người dùng được đọc chỉ số đăng ký mới, dù API trả dữ liệu tổng hợp không kèm PII.
+    @Get('activity')
+    @RequirePermissions(Permission.ADMIN_USER_MANAGEMENT)
+    async proxyUserActivity(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        await this.forward(req, res);
     }
 
     // Route collection dùng handler riêng vì NestJS không giữ được hai route decorator trên cùng một method.

@@ -44,6 +44,20 @@ export class AdminFinanceProxyController {
         response.status(status).json(data);
     }
 
+    // Chỉ quyền đọc finance mới nhận tổng giao dịch ví đã gom theo ngày, không có dữ liệu nhận dạng seller.
+    @Get('activity')
+    @RequirePermissions(Permission.ADMIN_FINANCE_READ)
+    async getActivity(
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/admin/finance/activity`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
     // Trả ledger nền tảng đã phân trang, không gồm dữ liệu tài khoản ngân hàng thô.
     @Get('ledger')
     @RequirePermissions(Permission.ADMIN_FINANCE_READ)
