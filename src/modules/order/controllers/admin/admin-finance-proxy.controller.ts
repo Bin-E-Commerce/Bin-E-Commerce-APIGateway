@@ -114,6 +114,139 @@ export class AdminFinanceProxyController {
         response.status(status).json(data);
     }
 
+    // Chuyển tiếp hàng đợi hoàn tiền; quyền đọc chỉ cho phép xem dữ liệu, không cho chốt giao dịch.
+    @Get('refunds')
+    @RequirePermissions(Permission.ADMIN_FINANCE_READ)
+    async getRefunds(
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/admin/finance/refunds`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
+    // Trả các khiếu nại chưa nhận hàng để admin có quyền đọc tài chính phân xử.
+    @Get('delivery-issues')
+    @RequirePermissions(Permission.ADMIN_FINANCE_READ)
+    async getDeliveryIssues(
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/admin/finance/delivery-issues`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
+    // Quyết định hoàn hoặc từ chối khiếu nại cần quyền reconcile; Order Service kiểm tra trạng thái và ghi audit.
+    @Post('delivery-issues/:issueId/resolution')
+    @RequirePermissions(Permission.ADMIN_FINANCE_RECONCILE)
+    async resolveDeliveryIssue(
+        @Param('issueId', new ParseUUIDPipe()) issueId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/admin/finance/delivery-issues/${issueId}/resolution`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
+    // Chuyển tiếp xác nhận chuyển tiền cho attempt Pay2S; bằng chứng và số tiền được Order Service xác thực.
+    @Post('refunds/payment-attempts/:attemptId/confirmation')
+    @RequirePermissions(Permission.ADMIN_FINANCE_RECONCILE)
+    async confirmPaymentAttemptRefund(
+        @Param('attemptId', new ParseUUIDPipe()) attemptId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/admin/finance/refunds/payment-attempts/${attemptId}/confirmation`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
+    // Ghi nhận lần chuyển Pay2S thất bại để admin xử lý lại trong refund queue.
+    @Post('refunds/payment-attempts/:attemptId/failure')
+    @RequirePermissions(Permission.ADMIN_FINANCE_RECONCILE)
+    async failPaymentAttemptRefund(
+        @Param('attemptId', new ParseUUIDPipe()) attemptId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/admin/finance/refunds/payment-attempts/${attemptId}/failure`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
+    // Chuyển tiếp xác nhận hoàn yêu cầu trả hàng; chỉ admin reconcile mới được ghi nhận tiền đã chuyển.
+    @Post('refunds/returns/:returnId/confirmation')
+    @RequirePermissions(Permission.ADMIN_FINANCE_RECONCILE)
+    async confirmReturnRefund(
+        @Param('returnId', new ParseUUIDPipe()) returnId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/admin/finance/refunds/returns/${returnId}/confirmation`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
+    // Giữ yêu cầu trả hàng trong hàng đợi khi giao dịch hoàn thất bại và lưu lý do để retry.
+    @Post('refunds/returns/:returnId/failure')
+    @RequirePermissions(Permission.ADMIN_FINANCE_RECONCILE)
+    async failReturnRefund(
+        @Param('returnId', new ParseUUIDPipe()) returnId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/admin/finance/refunds/returns/${returnId}/failure`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
+    // Chuyển tiếp xác nhận hoàn khiếu nại giao hàng đã được admin duyệt.
+    @Post('refunds/delivery-issues/:issueId/confirmation')
+    @RequirePermissions(Permission.ADMIN_FINANCE_RECONCILE)
+    async confirmDeliveryIssueRefund(
+        @Param('issueId', new ParseUUIDPipe()) issueId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/admin/finance/refunds/delivery-issues/${issueId}/confirmation`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
+    // Lưu lỗi hoàn khiếu nại để giao dịch tiếp tục được xử lý sau khi admin khắc phục nguyên nhân.
+    @Post('refunds/delivery-issues/:issueId/failure')
+    @RequirePermissions(Permission.ADMIN_FINANCE_RECONCILE)
+    async failDeliveryIssueRefund(
+        @Param('issueId', new ParseUUIDPipe()) issueId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/admin/finance/refunds/delivery-issues/${issueId}/failure`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
     // Chỉ quyền payout mới cho phép xem tài khoản nhận đầy đủ để admin tự chuyển khoản ngoài hệ thống.
     @Get('withdrawals/:withdrawalId')
     @RequirePermissions(Permission.ADMIN_FINANCE_PAYOUT)
