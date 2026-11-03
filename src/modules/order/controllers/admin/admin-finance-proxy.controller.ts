@@ -2,6 +2,7 @@
 import {
     Controller,
     Get,
+    Patch,
     Param,
     ParseUUIDPipe,
     Post,
@@ -128,6 +129,21 @@ export class AdminFinanceProxyController {
         response.status(status).json(data);
     }
 
+    // Chỉ quyền reconcile được bổ sung tài khoản nhận cho Pay2S đang chờ hoàn; body và identity context được forward nguyên trạng.
+    @Patch('refunds/payment-attempts/:attemptId/recipient-account')
+    @RequirePermissions(Permission.ADMIN_FINANCE_RECONCILE)
+    async updatePaymentAttemptRefundRecipientAccount(
+        @Param('attemptId', new ParseUUIDPipe()) attemptId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/admin/finance/refunds/payment-attempts/${attemptId}/recipient-account`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
     // Trả các khiếu nại chưa nhận hàng để admin có quyền đọc tài chính phân xử.
     @Get('delivery-issues')
     @RequirePermissions(Permission.ADMIN_FINANCE_READ)
@@ -157,7 +173,7 @@ export class AdminFinanceProxyController {
         response.status(status).json(data);
     }
 
-    // Chuyển tiếp xác nhận chuyển tiền cho attempt Pay2S; bằng chứng và số tiền được Order Service xác thực.
+    // Chuyển tiếp xác nhận Pay2S; Order Service kiểm tra snapshot số tiền và ghi admin/thời điểm xử lý.
     @Post('refunds/payment-attempts/:attemptId/confirmation')
     @RequirePermissions(Permission.ADMIN_FINANCE_RECONCILE)
     async confirmPaymentAttemptRefund(
@@ -351,7 +367,7 @@ export class AdminFinanceProxyController {
         response.status(status).json(data);
     }
 
-    // Forward COD refund confirmation only for finance admins; proof/amount are validated in Order Service.
+    // Chuyển tiếp xác nhận COD cho admin tài chính; Order Service kiểm tra snapshot số tiền.
     @Post('cod-refunds/:returnId/confirmation')
     @RequirePermissions(Permission.ADMIN_FINANCE_RECONCILE)
     async confirmCodRefund(
