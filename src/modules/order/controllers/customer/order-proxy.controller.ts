@@ -1,7 +1,7 @@
-// Controller này proxy public order API tới Order Service.
-// Gateway chỉ xác thực JWT, permission và forward user context; business rule checkout nằm ở Order Service.
+// Controller proxy public order API; Gateway xác thực JWT, permission và forward user context.
+// Business rule checkout và cập nhật yêu cầu hủy thuộc Order Service.
 
-import { Controller, Get, Param, Post, Req, Res } from '@nestjs/common';
+import { Controller, Get, Param, Post, Put, Req, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { Permission } from '@common/auth';
@@ -193,6 +193,21 @@ export class OrderProxyController {
     ): Promise<void> {
         const { data, status } = await this.proxyService.forward(
             `${this.targetBase}/api/v1/orders/${orderId}/cancel`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
+    // Forward việc sửa lý do/tài khoản của yêu cầu hủy; Order Service vẫn kiểm tra ownership và khả năng sửa.
+    @Put(':orderId/cancellation')
+    @RequirePermissions(Permission.ORDER_CANCEL)
+    async proxyUpdateCancellationDetails(
+        @Param('orderId') orderId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/orders/${orderId}/cancellation`,
             request,
         );
         response.status(status).json(data);
