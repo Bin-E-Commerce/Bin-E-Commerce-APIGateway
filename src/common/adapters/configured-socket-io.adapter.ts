@@ -18,8 +18,8 @@ export class ConfiguredSocketIoAdapter extends IoAdapter {
                 origin: this.allowedOrigins,
                 credentials: true,
             },
-            // Chỉ dùng WebSocket sau handshake để giảm request polling và tránh tạo thêm tải không cần thiết lên Gateway.
-            transports: ['websocket'],
+            // Client mặc định bắt đầu bằng polling rồi nâng cấp lên WebSocket; giữ cả hai để proxy chặn WebSocket vẫn có fallback.
+            transports: ['polling', 'websocket'],
         });
     }
 }
