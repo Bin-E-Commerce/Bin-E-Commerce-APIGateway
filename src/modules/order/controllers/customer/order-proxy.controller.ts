@@ -1,7 +1,16 @@
 // Controller proxy public order API; Gateway xác thực JWT, permission và forward user context.
 // Business rule checkout và cập nhật yêu cầu hủy thuộc Order Service.
 
-import { Controller, Get, Param, Post, Put, Req, Res } from '@nestjs/common';
+import {
+    Controller,
+    Get,
+    Param,
+    Patch,
+    Post,
+    Put,
+    Req,
+    Res,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { Permission } from '@common/auth';
@@ -128,6 +137,21 @@ export class OrderProxyController {
     @Get('returns/:returnId')
     @RequirePermissions(Permission.RETURN_READ)
     async proxyReturnDetail(
+        @Param('returnId') returnId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/orders/returns/${returnId}`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
+    // Customer sửa request của mình; Order Service kiểm tra owner, trạng thái REQUESTED và phiên bản dữ liệu.
+    @Patch('returns/:returnId')
+    @RequirePermissions(Permission.RETURN_CREATE)
+    async proxyUpdateReturn(
         @Param('returnId') returnId: string,
         @Req() request: Request,
         @Res() response: Response,

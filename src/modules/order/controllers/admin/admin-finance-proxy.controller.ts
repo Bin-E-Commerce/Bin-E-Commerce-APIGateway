@@ -45,6 +45,20 @@ export class AdminFinanceProxyController {
         response.status(status).json(data);
     }
 
+    // Yêu cầu cùng quyền đọc finance như dashboard rồi chuyển bộ lọc/phân trang nguyên trạng tới Order Service.
+    @Get('seller-debts')
+    @RequirePermissions(Permission.ADMIN_FINANCE_READ)
+    async getSellerDebts(
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/admin/finance/seller-debts`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
     // Chỉ quyền đọc finance mới nhận tổng giao dịch ví đã gom theo ngày, không có dữ liệu nhận dạng seller.
     @Get('activity')
     @RequirePermissions(Permission.ADMIN_FINANCE_READ)

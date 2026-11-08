@@ -51,6 +51,21 @@ export class SellerOrderProxyController {
         response.status(status).json(data);
     }
 
+    // Chỉ người có quyền duyệt return được lấy snapshot phí/nợ tối thiểu của request thuộc shop mình.
+    @Get('returns/:returnId/finance-preview')
+    @RequirePermissions(Permission.RETURN_REVIEW)
+    async proxyReturnFinancePreview(
+        @Param('returnId') returnId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/seller/orders/returns/${returnId}/finance-preview`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
     // Forward detail theo orderId; Order Service kiểm tra lại item thuộc shop hiện tại.
     @Get(':orderId')
     @RequirePermissions(Permission.SELLER_ORDER_READ)
