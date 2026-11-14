@@ -43,6 +43,16 @@ export class ProductProxyController {
         await this.proxyToProduct(req, res);
     }
 
+    // Gợi ý tìm kiếm là dữ liệu công khai và có read model nhẹ riêng để hỗ trợ autocomplete.
+    @Public()
+    @Get('search/suggestions')
+    async proxyProductSearchSuggestions(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        await this.proxyToProduct(req, res);
+    }
+
     // Danh mục thương hiệu là dữ liệu tham chiếu công khai cho bộ lọc và form tạo sản phẩm.
     @Public()
     @Get('brands')
