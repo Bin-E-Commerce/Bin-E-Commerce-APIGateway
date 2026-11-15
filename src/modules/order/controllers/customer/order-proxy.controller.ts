@@ -88,6 +88,51 @@ export class OrderProxyController {
         response.status(status).json(data);
     }
 
+    // Chỉ customer có quyền tạo order mới được xin lại payment URL; Order Service kiểm tra ownership và trạng thái cụ thể.
+    @Post(':orderId/pay2s-payment')
+    @RequirePermissions(Permission.ORDER_CREATE)
+    async proxyRetryPay2sPayment(
+        @Param('orderId') orderId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/orders/${orderId}/pay2s-payment`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
+    // Customer chỉ xem QR của order mình; Order Service kiểm tra owner rồi mới trả dữ liệu Pay2S an toàn.
+    @Get(':orderId/pay2s-payment')
+    @RequirePermissions(Permission.ORDER_READ)
+    async proxyGetPay2sPaymentDetails(
+        @Param('orderId') orderId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/orders/${orderId}/pay2s-payment`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
+    // Chỉ user có quyền hủy order mới gửi yêu cầu đóng link Pay2S và cập nhật trạng thái đơn.
+    @Post(':orderId/pay2s-payment/cancel')
+    @RequirePermissions(Permission.ORDER_CANCEL)
+    async proxyCancelPay2sPayment(
+        @Param('orderId') orderId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/orders/${orderId}/pay2s-payment/cancel`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
     // Forward quyết định nhận hàng sau khi Gateway đã xác thực JWT và permission customer tương ứng.
     @Post(':orderId/delivery-confirmation')
     @RequirePermissions(Permission.ORDER_CONFIRM_DELIVERY)

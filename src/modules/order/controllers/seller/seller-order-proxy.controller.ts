@@ -111,7 +111,22 @@ export class SellerOrderProxyController {
         response.status(status).json(data);
     }
 
-    // Seller ghi nhận hàng hoàn đạt hoặc không đạt kiểm tra.
+    // Seller xác nhận kiện hoàn đã về shop; quyền RETURN_INSPECT được giữ làm permission contract hiện tại.
+    @Post('returns/:returnId/confirm-received')
+    @RequirePermissions(Permission.RETURN_INSPECT)
+    async confirmReturnReceived(
+        @Param('returnId') returnId: string,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<void> {
+        const { data, status } = await this.proxyService.forward(
+            `${this.targetBase}/api/v1/seller/orders/returns/${returnId}/confirm-received`,
+            request,
+        );
+        response.status(status).json(data);
+    }
+
+    // Route tương thích cho client cũ; Order Service chỉ chấp nhận xác nhận thành công và từ chối lựa chọn không đạt.
     @Post('returns/:returnId/inspection')
     @RequirePermissions(Permission.RETURN_INSPECT)
     async inspectReturn(
