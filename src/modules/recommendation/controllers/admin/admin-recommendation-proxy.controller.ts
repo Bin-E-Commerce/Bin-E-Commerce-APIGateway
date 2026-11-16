@@ -1,6 +1,6 @@
 // Proxy Admin Recommendation tách khỏi public recommendation để permission và upstream boundary dễ audit.
 
-import { Controller, Get, Patch, Post, Req, Res } from '@nestjs/common';
+import { Controller, Get, Req, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Permission } from '@common/auth';
 import type { Request, Response } from 'express';
@@ -56,41 +56,20 @@ export class AdminRecommendationProxyController {
         await this.forward(req, res);
     }
 
-    // Đọc policy ranking đang chạy, gồm trọng số Standard Ranking và cấu hình AI-Enhanced Ranking.
-    // Quyền policy-read được xác thực ở Gateway; controller chỉ chuyển tiếp và trả kết quả upstream.
+    // Đọc trạng thái model và candidate source; Gateway chỉ chuyển tiếp kết quả từ Recommendation Service.
     @Get('config')
     @RequirePermissions(Permission.ADMIN_RECOMMENDATION_POLICY_READ)
     async getConfig(@Req() req: Request, @Res() res: Response): Promise<void> {
         await this.forward(req, res);
     }
 
-    // Gửi phần policy Admin muốn cập nhật trong body, chẳng hạn hybridWeights, mlEnabled hoặc mlBlend.
-    // Chỉ quyền policy-write được phép; Recommendation Service chịu trách nhiệm validate, lưu version và áp dụng policy.
-    @Patch('config')
-    @RequirePermissions(Permission.ADMIN_RECOMMENDATION_POLICY_WRITE)
-    async updateConfig(
-        @Req() req: Request,
-        @Res() res: Response,
-    ): Promise<void> {
-        await this.forward(req, res);
-    }
-
-    // Đọc danh sách phiên bản policy và metadata audit để Admin kiểm tra các lần thay đổi trước đó.
-    // Đây là thao tác chỉ đọc, yêu cầu quyền policy-read và không làm thay đổi cấu hình đang chạy.
+    // Đọc các bản ghi policy cũ để kiểm toán; endpoint không thay đổi cấu hình model đang phục vụ.
     @Get('config/history')
     @RequirePermissions(Permission.ADMIN_RECOMMENDATION_POLICY_READ)
     async configHistory(
         @Req() req: Request,
         @Res() res: Response,
     ): Promise<void> {
-        await this.forward(req, res);
-    }
-
-    // Yêu cầu khôi phục policy theo version trên URL; service đích tạo version rollback mới thay vì sửa lịch sử cũ.
-    // Chỉ quyền policy-rollback được phép; response/status từ Recommendation Service được giữ nguyên.
-    @Post('config/rollback/:version')
-    @RequirePermissions(Permission.ADMIN_RECOMMENDATION_POLICY_ROLLBACK)
-    async rollback(@Req() req: Request, @Res() res: Response): Promise<void> {
         await this.forward(req, res);
     }
 
