@@ -133,7 +133,7 @@ export class OrderProxyController {
         response.status(status).json(data);
     }
 
-    // Forward quyết định nhận hàng sau khi Gateway đã xác thực JWT và permission customer tương ứng.
+    // Forward quyết định nhận hàng sau khi Gateway xác thực JWT và permission của người mua.
     @Post(':orderId/delivery-confirmation')
     @RequirePermissions(Permission.ORDER_CONFIRM_DELIVERY)
     async proxyDeliveryConfirmation(
