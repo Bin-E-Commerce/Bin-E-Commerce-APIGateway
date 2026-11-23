@@ -6,10 +6,15 @@ import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
+import express from 'express';
 import { AppModule } from '@/app.module';
 import { buildHelmetOptions } from '@/common/config/helmet.config';
 import { ConfiguredSocketIoAdapter } from '@/common/adapters/configured-socket-io.adapter';
 import { setupHttpObservability } from '@common/observability/http-observability';
+import {
+    createImageSearchUploadConcurrencyMiddleware,
+    IMAGE_SEARCH_UPLOAD_PATH,
+} from '@/modules/product/image-search-upload-concurrency.middleware';
 
 // Khởi động gateway và đăng ký middleware cross-cutting trước khi nhận traffic.
 async function bootstrap(): Promise<void> {
@@ -33,10 +38,20 @@ async function bootstrap(): Promise<void> {
     // Helmet: gắn security headers cho tất cả response
     // Phải đặt TRƯỚC các middleware khác để header được áp dụng sớm nhất
     app.use(helmet(buildHelmetOptions(isDev)));
-
     app.setGlobalPrefix('api');
-    // Đăng ký metrics RED và request ID trước khi service bắt đầu nhận traffic.
+    // Gắn request ID và RED metrics trước guard/parser để cả 429 lẫn lỗi body 413 đều được ghi nhận.
     setupHttpObservability(app, 'api-gateway');
+    // Đặt concurrency guard trước parser để request vượt giới hạn không chiếm RAM bằng raw body.
+    app.use(createImageSearchUploadConcurrencyMiddleware());
+    // Chỉ parse raw bytes ở endpoint tìm ảnh; upload body được chặn đồng thời trước khi parser đọc.
+    app.use(
+        IMAGE_SEARCH_UPLOAD_PATH,
+        express.raw({
+            type: ['image/jpeg', 'image/png', 'image/webp'],
+            limit: '5mb',
+        }),
+    );
+
     app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
     // Dùng để tự động validate các DTO dựa trên class-validator decorators

@@ -10,6 +10,7 @@ import {
     Req,
     Res,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { Permission } from '@common/auth';
@@ -47,6 +48,27 @@ export class ProductProxyController {
     @Public()
     @Get('search/suggestions')
     async proxyProductSearchSuggestions(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        await this.proxyToProduct(req, res);
+    }
+
+    // Giới hạn upload ảnh theo IP và giữ route public vì khách chưa đăng nhập vẫn được tìm catalog.
+    @Public()
+    @Throttle({ 'api-gateway-global': { limit: 10, ttl: 60_000 } })
+    @Post('image-searches')
+    async proxyProductImageSearch(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<void> {
+        await this.proxyToProduct(req, res);
+    }
+
+    // Query session không chứa ảnh; proxy giữ search/filter params nhưng access log được tắt ở Nginx.
+    @Public()
+    @Get('image-searches/:searchId')
+    async proxyProductImageSearchSession(
         @Req() req: Request,
         @Res() res: Response,
     ): Promise<void> {
