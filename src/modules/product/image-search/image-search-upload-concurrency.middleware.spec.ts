@@ -1,7 +1,10 @@
 // Kiểm thử upload guard chạy trước parser để body bị từ chối không vào RAM process.
 import { EventEmitter } from 'node:events';
 import type { NextFunction, Request, Response } from 'express';
-import { createImageSearchUploadConcurrencyMiddleware } from '@/modules/product/image-search/image-search-upload-concurrency.middleware';
+import {
+    createImageSearchUploadConcurrencyMiddleware,
+    isImageSearchUploadRequest,
+} from '@/modules/product/image-search/image-search-upload-concurrency.middleware';
 
 // Tạo request/response EventEmitter để mô phỏng vòng đời body và kết thúc HTTP response.
 function createExchange(method: string, path: string) {
@@ -21,13 +24,41 @@ function createExchange(method: string, path: string) {
 }
 
 describe('ImageSearchUploadConcurrencyMiddleware', () => {
+    // Chỉ route POST upload và alias slash cuối được đọc body; subpath POST vẫn dừng ở 404 không buffer ảnh.
+    it('matches only the image upload endpoint and its trailing-slash alias', () => {
+        expect(
+            isImageSearchUploadRequest(
+                'POST',
+                '/api/v1/products/image-searches',
+            ),
+        ).toBe(true);
+        expect(
+            isImageSearchUploadRequest(
+                'POST',
+                '/api/v1/products/image-searches/',
+            ),
+        ).toBe(true);
+        expect(
+            isImageSearchUploadRequest(
+                'POST',
+                '/api/v1/products/image-searches/extra',
+            ),
+        ).toBe(false);
+        expect(
+            isImageSearchUploadRequest(
+                'GET',
+                '/api/v1/products/image-searches',
+            ),
+        ).toBe(false);
+    });
+
     // Chặn request thứ ba trước parser, rồi cho request mới đi tiếp khi response giải phóng slot.
     it('limits concurrent image uploads before parsing their bodies', () => {
         const middleware = createImageSearchUploadConcurrencyMiddleware();
         const first = createExchange('POST', '/api/v1/products/image-searches');
         const second = createExchange(
             'POST',
-            '/api/v1/products/image-searches',
+            '/api/v1/products/image-searches/',
         );
         const rejected = createExchange(
             'POST',

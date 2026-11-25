@@ -7,13 +7,14 @@ import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import express from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from '@/app.module';
 import { buildHelmetOptions } from '@/common/config/helmet.config';
 import { ConfiguredSocketIoAdapter } from '@/common/adapters/configured-socket-io.adapter';
 import { setupHttpObservability } from '@common/observability/http-observability';
 import {
     createImageSearchUploadConcurrencyMiddleware,
-    IMAGE_SEARCH_UPLOAD_PATH,
+    isImageSearchUploadRequest,
 } from '@/modules/product/image-search/image-search-upload-concurrency.middleware';
 
 // Khởi động gateway và đăng ký middleware cross-cutting trước khi nhận traffic.
@@ -43,14 +44,21 @@ async function bootstrap(): Promise<void> {
     setupHttpObservability(app, 'api-gateway');
     // Đặt concurrency guard trước parser để request vượt giới hạn không chiếm RAM bằng raw body.
     app.use(createImageSearchUploadConcurrencyMiddleware());
-    // Chỉ parse raw bytes ở endpoint tìm ảnh; upload body được chặn đồng thời trước khi parser đọc.
-    app.use(
-        IMAGE_SEARCH_UPLOAD_PATH,
-        express.raw({
-            type: ['image/jpeg', 'image/png', 'image/webp'],
-            limit: '5mb',
-        }),
-    );
+    // Express app.use theo prefix sẽ parse cả subpath, nên wrapper chỉ cho đúng POST upload qua raw parser.
+    const imageSearchRawParser = express.raw({
+        type: ['image/jpeg', 'image/png', 'image/webp'],
+        limit: '5mb',
+    });
+    app.use((request: Request, response: Response, next: NextFunction) => {
+        // Mọi route khác tiếp tục đến Nest mà không buffer raw image body.
+        if (!isImageSearchUploadRequest(request.method, request.path)) {
+            next();
+            return;
+        }
+
+        // Predicate giống concurrency guard; route upload được parse sau khi đã lấy slot.
+        imageSearchRawParser(request, response, next);
+    });
 
     app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
