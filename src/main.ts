@@ -14,7 +14,7 @@ import { setupHttpObservability } from '@common/observability/http-observability
 import {
     createImageSearchUploadConcurrencyMiddleware,
     IMAGE_SEARCH_UPLOAD_PATH,
-} from '@/modules/product/image-search-upload-concurrency.middleware';
+} from '@/modules/product/image-search/image-search-upload-concurrency.middleware';
 
 // Khởi động gateway và đăng ký middleware cross-cutting trước khi nhận traffic.
 async function bootstrap(): Promise<void> {

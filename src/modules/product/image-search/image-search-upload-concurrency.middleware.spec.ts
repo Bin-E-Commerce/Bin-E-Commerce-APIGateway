@@ -1,7 +1,7 @@
 // Kiểm thử upload guard chạy trước parser để body bị từ chối không vào RAM process.
 import { EventEmitter } from 'node:events';
 import type { NextFunction, Request, Response } from 'express';
-import { createImageSearchUploadConcurrencyMiddleware } from '@/modules/product/image-search-upload-concurrency.middleware';
+import { createImageSearchUploadConcurrencyMiddleware } from '@/modules/product/image-search/image-search-upload-concurrency.middleware';
 
 // Tạo request/response EventEmitter để mô phỏng vòng đời body và kết thúc HTTP response.
 function createExchange(method: string, path: string) {
