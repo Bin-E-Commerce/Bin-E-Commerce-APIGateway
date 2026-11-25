@@ -62,7 +62,7 @@ export class ProductProxyController {
         @Req() req: Request,
         @Res() res: Response,
     ): Promise<void> {
-        await this.proxyToProduct(req, res);
+        await this.proxyToProduct(req, res, undefined, 'product-image-upload');
     }
 
     // Query session không chứa ảnh; proxy giữ search/filter params nhưng access log được tắt ở Nginx.
@@ -72,7 +72,7 @@ export class ProductProxyController {
         @Req() req: Request,
         @Res() res: Response,
     ): Promise<void> {
-        await this.proxyToProduct(req, res);
+        await this.proxyToProduct(req, res, undefined, 'product-image-session');
     }
 
     // Danh mục thương hiệu là dữ liệu tham chiếu công khai cho bộ lọc và form tạo sản phẩm.
@@ -277,15 +277,18 @@ export class ProductProxyController {
         );
     }
 
-    // Giữ nguyên path, query và user context khi chuyển request sang Product Service.
+    // Giữ nguyên path, query và user context trong request; route ảnh dùng nhãn log tách khỏi URL thật.
     private async proxyToProduct(
         req: Request,
         res: Response,
         internalPath?: string,
+        errorLogRoute?: string,
     ): Promise<void> {
         const path = internalPath ?? req.path.replace(/^\/api/, '');
         const url = `${this.targetBase}/api${path}`;
-        const { data, status } = await this.proxyService.forward(url, req);
+        const { data, status } = errorLogRoute
+            ? await this.proxyService.forward(url, req, {}, { errorLogRoute })
+            : await this.proxyService.forward(url, req);
         res.status(status).json(data);
     }
 }

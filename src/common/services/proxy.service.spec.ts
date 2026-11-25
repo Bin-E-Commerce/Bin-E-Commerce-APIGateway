@@ -1,10 +1,47 @@
-// Kiểm tra vòng đời SSE của proxy mà không mở HTTP server hay gọi microservice thật.
+// Kiểm tra vòng đời SSE và giới hạn dữ liệu log của proxy mà không gọi upstream thật.
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 import type { HttpService } from '@nestjs/axios';
+import { Logger, ServiceUnavailableException } from '@nestjs/common';
 import type { Request } from 'express';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { ProxyService } from '@/common/services/proxy.service';
+
+// Khi upstream đứt kết nối, route session chỉ log nhãn và mã lỗi cố định, vẫn trả 503 cho client.
+it('should keep image search session identifiers out of proxy error logs', async () => {
+    const targetUrl = 'http://product-service/example/session-test-id';
+    const error = Object.assign(new Error(`Timeout for ${targetUrl}`), {
+        code: 'ETIMEDOUT',
+    });
+    const target = new ProxyService({
+        request: () => throwError(() => error),
+    } as unknown as HttpService);
+    const request = {
+        method: 'GET',
+        headers: {},
+        query: {},
+        socket: {},
+    } as Request;
+    const log = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => undefined);
+
+    try {
+        await expect(
+            target.forward(
+                targetUrl,
+                request,
+                {},
+                { errorLogRoute: 'product-image-session' },
+            ),
+        ).rejects.toBeInstanceOf(ServiceUnavailableException);
+        expect(log.mock.calls).toEqual([
+            ['Proxy error on product-image-session: ETIMEDOUT'],
+        ]);
+    } finally {
+        log.mockRestore();
+    }
+});
 
 describe('ProxyService.forwardStream', () => {
     // Tạo cặp request/response giả đủ hành vi để kiểm tra proxy chỉ hủy upstream khi browser rời đi.

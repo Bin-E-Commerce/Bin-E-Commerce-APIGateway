@@ -31,7 +31,7 @@ export class ProxyService {
         targetUrl: string,
         req: Request,
         additionalHeaders: Record<string, string> = {},
-        options: { includeQueryParams?: boolean } = {},
+        options: { includeQueryParams?: boolean; errorLogRoute?: string } = {},
     ): Promise<{
         data: unknown;
         status: number;
@@ -43,7 +43,8 @@ export class ProxyService {
             data: req.body,
             headers: this.buildForwardHeaders(req), // Xây dựng header để forward, bao gồm cả thông tin người dùng được inject từ JWT guard
             // URL có thể đã mang query thô cần giữ nguyên chữ ký, nên chỉ serialize req.query khi được bật.
-            params: options.includeQueryParams === false ? undefined : req.query,
+            params:
+                options.includeQueryParams === false ? undefined : req.query,
             validateStatus: () => true, // Cho phép xử lý tất cả các status code trong response, không tự động throw lỗi cho status >= 400 để chúng ta có thể trả về đúng lỗi từ upstream service cho client
         };
         // Header nội bộ được thêm sau context client để browser không thể ghi đè service identity.
@@ -65,9 +66,21 @@ export class ProxyService {
         } catch (err) {
             // Xử lý lỗi từ request đến targetUrl, log lỗi và trả về lỗi phù hợp cho client
             const axiosErr = err as AxiosError;
-            this.logger.error(
-                `Proxy error to ${targetUrl}: ${axiosErr.message}`,
-            );
+            if (options.errorLogRoute) {
+                // Route tìm ảnh chỉ log nhãn và mã lỗi hữu hạn, vì URL đích chứa token phiên.
+                const code =
+                    typeof axiosErr.code === 'string' &&
+                    /^[A-Z0-9_]{1,40}$/.test(axiosErr.code)
+                        ? axiosErr.code
+                        : 'UNKNOWN';
+                this.logger.error(
+                    `Proxy error on ${options.errorLogRoute}: ${code}`,
+                );
+            } else {
+                this.logger.error(
+                    `Proxy error to ${targetUrl}: ${axiosErr.message}`,
+                );
+            }
 
             if (axiosErr.response) {
                 throw new HttpException(
